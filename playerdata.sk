@@ -1,0 +1,14 @@
+on join:
+    set {_uuid} to uuid of player
+
+    if {player.firstjoin::%{_uuid}%} is not set:
+        set {player.firstjoin::%{_uuid}%} to now
+
+    if {player.games::%{_uuid}%} is not set:
+        set {player.games::%{_uuid}%} to 0
+
+    if {player.wins::%{_uuid}%} is not set:
+        set {player.wins::%{_uuid}%} to 0
+
+    if {player.practice::%{_uuid}%} is not set:
+        set {player.practice::%{_uuid}%} to 0

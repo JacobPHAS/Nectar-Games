@@ -1,0 +1,294 @@
+options:
+    prefix: &6&lNectar &8»
+    blitz-room-size: 25
+    blitz-room-height: 16
+
+# Blitz Hunt reusable template library - safer fixed version.
+# Capture rooms as full 25x16x25 cuboids, from the LOWER X/Y/Z corner.
+# Capture the centre as the full bounding cuboid, including every hallway.
+# This generator DOES NOT clear any blocks before pasting.
+# Test in a separate empty area first. Back up the world before testing.
+
+function blitzFixedOffset(origin: location, dx: number, dy: number, dz: number) :: location:
+    set {_loc} to {_origin}
+    add {_dx} to x-coordinate of {_loc}
+    add {_dy} to y-coordinate of {_loc}
+    add {_dz} to z-coordinate of {_loc}
+    return {_loc}
+
+function blitzFixedSaveRoom(room: number, origin: location):
+    delete {blitz.room.type::%{_room}%::*}
+    delete {blitz.room.data::%{_room}%::*}
+    set {_x} to 0
+    while {_x} < 25:
+        set {_y} to 0
+        while {_y} < 16:
+            set {_z} to 0
+            while {_z} < 25:
+                set {_loc} to blitzFixedOffset({_origin}, {_x}, {_y}, {_z})
+                set {blitz.room.type::%{_room}%::%{_x}%::%{_y}%::%{_z}%} to type of block at {_loc}
+                set {blitz.room.data::%{_room}%::%{_x}%::%{_y}%::%{_z}%} to block data of block at {_loc}
+                add 1 to {_z}
+            add 1 to {_y}
+        add 1 to {_x}
+    set {blitz.room.saved::%{_room}%} to true
+
+function blitzFixedSaveCentre(origin: location, sizeX: number, sizeY: number, sizeZ: number):
+    delete {blitz.centre.type::*}
+    delete {blitz.centre.data::*}
+    set {_x} to 0
+    while {_x} < {_sizeX}:
+        set {_y} to 0
+        while {_y} < {_sizeY}:
+            set {_z} to 0
+            while {_z} < {_sizeZ}:
+                set {_loc} to blitzFixedOffset({_origin}, {_x}, {_y}, {_z})
+                set {blitz.centre.type::%{_x}%::%{_y}%::%{_z}%} to type of block at {_loc}
+                set {blitz.centre.data::%{_x}%::%{_y}%::%{_z}%} to block data of block at {_loc}
+                add 1 to {_z}
+            add 1 to {_y}
+        add 1 to {_x}
+    set {blitz.centre.size.x} to {_sizeX}
+    set {blitz.centre.size.y} to {_sizeY}
+    set {blitz.centre.size.z} to {_sizeZ}
+    set {blitz.centre.saved} to true
+
+function blitzFixedPasteRoom(room: number, origin: location):
+    if {blitz.room.saved::%{_room}%} is not true:
+        stop
+    set {_x} to 0
+    while {_x} < 25:
+        set {_y} to 0
+        while {_y} < 16:
+            set {_z} to 0
+            while {_z} < 25:
+                set {_loc} to blitzFixedOffset({_origin}, {_x}, {_y}, {_z})
+                set {_type} to {blitz.room.type::%{_room}%::%{_x}%::%{_y}%::%{_z}%}
+                set {_data} to {blitz.room.data::%{_room}%::%{_x}%::%{_y}%::%{_z}%}
+                if {_type} is set:
+                    set block at {_loc} to {_type}
+                    if {_data} is set:
+                        set block data of block at {_loc} to {_data}
+                add 1 to {_z}
+            add 1 to {_y}
+        add 1 to {_x}
+
+function blitzFixedPasteCentre(origin: location):
+    if {blitz.centre.saved} is not true:
+        stop
+    set {_sx} to {blitz.centre.size.x}
+    set {_sy} to {blitz.centre.size.y}
+    set {_sz} to {blitz.centre.size.z}
+    set {_x} to 0
+    while {_x} < {_sx}:
+        set {_y} to 0
+        while {_y} < {_sy}:
+            set {_z} to 0
+            while {_z} < {_sz}:
+                set {_loc} to blitzFixedOffset({_origin}, {_x}, {_y}, {_z})
+                set {_type} to {blitz.centre.type::%{_x}%::%{_y}%::%{_z}%}
+                set {_data} to {blitz.centre.data::%{_x}%::%{_y}%::%{_z}%}
+                if {_type} is set:
+                    set block at {_loc} to {_type}
+                    if {_data} is set:
+                        set block data of block at {_loc} to {_data}
+                add 1 to {_z}
+            add 1 to {_y}
+        add 1 to {_x}
+
+command /blitzsetroom <number>:
+    permission: op
+    trigger:
+        if arg-1 is less than 1:
+            send "{@prefix} &cRoom number must be 1-24."
+            stop
+        if arg-1 is greater than 24:
+            send "{@prefix} &cRoom number must be 1-24."
+            stop
+        set {blitz.build.origin::%uuid of player%} to location of block at player
+        set {blitz.build.roomnumber::%uuid of player%} to arg-1
+        send "{@prefix} &aCapture corner set for room %arg-1%."
+        send "&7This captures 25 wide x 16 high x 25 deep. Use /blitzsaveroom %arg-1%."
+
+command /blitzsaveroom <number>:
+    permission: op
+    trigger:
+        if arg-1 is less than 1:
+            send "{@prefix} &cRoom number must be 1-24."
+            stop
+        if arg-1 is greater than 24:
+            send "{@prefix} &cRoom number must be 1-24."
+            stop
+        if {blitz.build.origin::%uuid of player%} is not set:
+            send "{@prefix} &cUse /blitzsetroom %arg-1% first."
+            stop
+        if {blitz.build.roomnumber::%uuid of player%} is not arg-1:
+            send "{@prefix} &cThat room number does not match the selected capture."
+            stop
+        set {_origin} to {blitz.build.origin::%uuid of player%}
+        send "{@prefix} &eSaving room %arg-1%... this may take a moment."
+        blitzFixedSaveRoom(arg-1, {_origin})
+        delete {blitz.build.origin::%uuid of player%}
+        delete {blitz.build.roomnumber::%uuid of player%}
+        send "{@prefix} &aRoom %arg-1% saved."
+
+command /blitzcentrepos1:
+    permission: op
+    trigger:
+        set {blitz.centre.corner1::%uuid of player%} to location of block at player
+        send "{@prefix} &aCentre bounding-box corner 1 saved."
+
+command /blitzcentrepos2:
+    permission: op
+    trigger:
+        set {blitz.centre.corner2::%uuid of player%} to location of block at player
+        send "{@prefix} &aCentre bounding-box corner 2 saved."
+
+command /blitzsavecentre:
+    permission: op
+    trigger:
+        set {_a} to {blitz.centre.corner1::%uuid of player%}
+        set {_b} to {blitz.centre.corner2::%uuid of player%}
+        if {_a} is not set:
+            send "{@prefix} &cRun /blitzcentrepos1 at one corner first."
+            stop
+        if {_b} is not set:
+            send "{@prefix} &cRun /blitzcentrepos2 at the opposite corner first."
+            stop
+        if world of {_a} is not world of {_b}:
+            send "{@prefix} &cBoth corners must be in the same world."
+            stop
+        set {_minX} to x-coordinate of {_a}
+        set {_maxX} to x-coordinate of {_b}
+        if {_minX} is greater than {_maxX}:
+            set {_tmp} to {_minX}
+            set {_minX} to {_maxX}
+            set {_maxX} to {_tmp}
+        set {_minY} to y-coordinate of {_a}
+        set {_maxY} to y-coordinate of {_b}
+        if {_minY} is greater than {_maxY}:
+            set {_tmp} to {_minY}
+            set {_minY} to {_maxY}
+            set {_maxY} to {_tmp}
+        set {_minZ} to z-coordinate of {_a}
+        set {_maxZ} to z-coordinate of {_b}
+        if {_minZ} is greater than {_maxZ}:
+            set {_tmp} to {_minZ}
+            set {_minZ} to {_maxZ}
+            set {_maxZ} to {_tmp}
+        set {_sx} to {_maxX} - {_minX} + 1
+        set {_sy} to {_maxY} - {_minY} + 1
+        set {_sz} to {_maxZ} - {_minZ} + 1
+        if {_sx} is greater than 160:
+            send "{@prefix} &cCentre width exceeds 160 blocks."
+            stop
+        if {_sy} is greater than 80:
+            send "{@prefix} &cCentre height exceeds 80 blocks."
+            stop
+        if {_sz} is greater than 160:
+            send "{@prefix} &cCentre depth exceeds 160 blocks."
+            stop
+        set {_origin} to location({_minX}, {_minY}, {_minZ}, world of {_a})
+        send "{@prefix} &eSaving full centre cuboid %{_sx}%x%{_sy}%x%{_sz}%..."
+        blitzFixedSaveCentre({_origin}, {_sx}, {_sy}, {_sz})
+        delete {blitz.centre.corner1::%uuid of player%}
+        delete {blitz.centre.corner2::%uuid of player%}
+        send "{@prefix} &aCentre and captured hallways saved."
+
+command /blitzsetmap:
+    permission: op
+    trigger:
+        if {blitz.centre.saved} is not true:
+            send "{@prefix} &cSave the centre template first."
+            stop
+        set {blitz.map.origin} to location of block at player
+        send "{@prefix} &aCentre destination corner set. Use an empty test area."
+
+command /blitzrooms:
+    permission: op
+    trigger:
+        set {_count} to 0
+        loop 24 times:
+            if {blitz.room.saved::%loop-number%} is true:
+                add 1 to {_count}
+        send "{@prefix} &7Saved rooms: &e%{_count}%&7/24."
+        if {blitz.centre.saved} is true:
+            send "{@prefix} &7Centre: &aSaved &7(%{blitz.centre.size.x}%x%{blitz.centre.size.y}%x%{blitz.centre.size.z}%)."
+        else:
+            send "{@prefix} &7Centre: &cMissing."
+
+command /blitzgenerate:
+    permission: op
+    trigger:
+        if {blitz.map.origin} is not set:
+            send "{@prefix} &cRun /blitzsetmap in an empty test area first."
+            stop
+        if {blitz.centre.saved} is not true:
+            send "{@prefix} &cCentre template is missing."
+            stop
+        delete {_pool::*}
+        loop 24 times:
+            if {blitz.room.saved::%loop-number%} is true:
+                add loop-number to {_pool::*}
+        if size of {_pool::*} is less than 8:
+            send "{@prefix} &cSave at least 8 different rooms first."
+            stop
+        set {_base} to {blitz.map.origin}
+        set {_sx} to {blitz.centre.size.x}
+        set {_sz} to {blitz.centre.size.z}
+        # Eight positions: 4 corner rooms plus 4 cardinal rooms centred on
+        # the centre's bounding box. No blocks are cleared anywhere.
+        set {_midX} to floor(({_sx} - 25) / 2)
+        set {_midZ} to floor(({_sz} - 25) / 2)
+        set {_northWest} to blitzFixedOffset({_base}, -25, 0, -25)
+        set {_north} to blitzFixedOffset({_base}, {_midX}, 0, -25)
+        set {_northEast} to blitzFixedOffset({_base}, {_sx}, 0, -25)
+        set {_west} to blitzFixedOffset({_base}, -25, 0, {_midZ})
+        set {_east} to blitzFixedOffset({_base}, {_sx}, 0, {_midZ})
+        set {_southWest} to blitzFixedOffset({_base}, -25, 0, {_sz})
+        set {_south} to blitzFixedOffset({_base}, {_midX}, 0, {_sz})
+        set {_southEast} to blitzFixedOffset({_base}, {_sx}, 0, {_sz})
+        send "{@prefix} &ePasting centre and eight unique rooms. No clearing will be done."
+        blitzFixedPasteCentre({_base})
+        set {_plots::*} to {_northWest}, {_north}, {_northEast}, {_west}, {_east}, {_southWest}, {_south}, {_southEast}
+        set {_i} to 0
+        loop {_plots::*}:
+            add 1 to {_i}
+            set {_room} to random element out of {_pool::*}
+            remove {_room} from {_pool::*}
+            blitzFixedPasteRoom({_room}, loop-value)
+            set {blitz.generated.room::%{_i}%} to {_room}
+        send "{@prefix} &aGeneration finished. Check all four hallway connections in the test area."
+
+command /blitzclearroom <number>:
+    permission: op
+    trigger:
+        if arg-1 is less than 1:
+            send "{@prefix} &cRoom number must be 1-24."
+            stop
+        if arg-1 is greater than 24:
+            send "{@prefix} &cRoom number must be 1-24."
+            stop
+        delete {blitz.room.type::%arg-1%::*}
+        delete {blitz.room.data::%arg-1%::*}
+        delete {blitz.room.saved::%arg-1%}
+        send "{@prefix} &aRoom %arg-1% removed from the library."
+
+command /blitzclearrooms:
+    permission: op
+    trigger:
+        delete {blitz.room.type::*}
+        delete {blitz.room.data::*}
+        delete {blitz.room.saved::*}
+        send "{@prefix} &aAll room templates removed."
+
+command /blitzclearcentre:
+    permission: op
+    trigger:
+        delete {blitz.centre.type::*}
+        delete {blitz.centre.data::*}
+        delete {blitz.centre.size.x}
+        delete {blitz.centre.size.y}
+        delete {blitz.centre.size.z}
+        delete {blitz.centre.saved}
+        send "{@prefix} &aCentre template removed."

@@ -1,0 +1,57 @@
+command /buildmode:
+    permission: op
+    trigger:
+        set {player.inGame::%uuid of player%} to true
+        clear player's inventory
+        send "&aBuild mode enabled. Your Nectar hotbar is disabled."
+
+
+command /endbuildmode:
+    permission: op
+    trigger:
+        set {player.inGame::%uuid of player%} to false
+        clear player's inventory
+        refreshNectarHotbar(player)
+        send "&aBuild mode disabled."
+
+
+command /queuetest <text>:
+    permission: op
+    trigger:
+        set {_targetName} to arg-1
+        set {_found} to false
+
+        loop {hosts::*}:
+            set {_hostId} to "%loop-value%"
+            set {_owner} to {host.owner::%{_hostId}%}
+
+            if {_owner} is online:
+                if name of {_owner} is {_targetName}:
+                    set {_found} to true
+
+                    set {_max} to {host.maxplayers::%{_hostId}%}
+
+                    if {_max} is not set:
+                        set {_max} to 10
+
+                    set {_count} to size of {host.players::%{_hostId}%::*}
+
+                    send "&6&lNectar &8» &eQueue test for %name of {_owner}%&7:" to player
+
+                    if {host.started::%{_hostId}%} is true:
+                        send "&c✗ Game already started." to player
+
+                    else if {_count} >= {_max}:
+                        send "&c✗ Queue is full (%{_count}%/%{_max}%)." to player
+
+                    else if "%uuid of {_owner}%" is "%uuid of player%":
+                        send "&e! You are the host owner, so you cannot join your own queue." to player
+
+                    else:
+                        send "&a✓ You pass the queue checks (%{_count}%/%{_max}%)." to player
+                        send "&7This command only tests; it does not join the queue." to player
+
+                    stop loop
+
+        if {_found} is false:
+            send "&6&lNectar &8» &cNo active host found for &e%{_targetName}%&c." to player

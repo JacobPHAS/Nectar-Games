@@ -1,0 +1,117 @@
+# =========================================================
+# NECTAR - ACTIVE HOSTS / QUEUE
+# =========================================================
+
+function openActiveHosts(p: player):
+
+    set {_uuid} to "%uuid of {_p}%"
+
+    delete {activehosts.slot::%{_uuid}%::*}
+    set {activehosts.mode::%{_uuid}%} to true
+
+    set {_inv} to chest inventory with 6 rows named "&e&lActive Hosts"
+
+    set {_slot} to 0
+    set {_index} to 1
+
+    while {_index} <= size of {hosts::*}:
+
+        set {_hostId} to "%{hosts::%{_index}%}%"
+        set {_owner} to {host.owner::%{_hostId}%}
+
+        if {_owner} is online:
+            if {_slot} < 45:
+
+                set {_head} to {_owner}'s skull
+                set name of {_head} to "&6&l%name of {_owner}%'s Host"
+                set slot {_slot} of {_inv} to {_head}
+
+                set {activehosts.slot::%{_uuid}%::%{_slot}%} to {_hostId}
+                add 1 to {_slot}
+
+        add 1 to {_index}
+
+    if {_slot} is 0:
+        set {_empty} to gray stained glass pane
+        set name of {_empty} to "&7&lNo Active Hosts"
+        set slot 22 of {_inv} to {_empty}
+
+    set {_back} to arrow
+    set name of {_back} to "&c&lBack"
+    set slot 49 of {_inv} to {_back}
+
+    open {_inv} to {_p}
+
+
+command /activehosts:
+    trigger:
+        openActiveHosts(player)
+
+
+on inventory click:
+
+    set {_uuid} to "%uuid of player%"
+
+    if {activehosts.mode::%{_uuid}%} is not true:
+        stop
+
+    cancel event
+
+    if clicked slot is 49:
+        close player's inventory
+        delete {activehosts.mode::%{_uuid}%}
+        delete {activehosts.slot::%{_uuid}%::*}
+        refreshNectarHotbar(player)
+        stop
+
+    set {_hostId} to {activehosts.slot::%{_uuid}%::%clicked slot%}
+
+    if {_hostId} is not set:
+        stop
+
+    set {_hostId} to "%{_hostId}%"
+
+    if {host.owner::%{_hostId}%} is not set:
+        send "&6&lNectar &8» &cThat host is no longer available."
+        close player's inventory
+        delete {activehosts.mode::%{_uuid}%}
+        delete {activehosts.slot::%{_uuid}%::*}
+        stop
+
+    joinHost(player, {_hostId})
+
+
+command /leavehost:
+    trigger:
+
+        set {_myUuid} to "%uuid of player%"
+        set {_index} to 1
+        set {_found} to false
+
+        while {_index} <= size of {hosts::*}:
+
+            set {_hostId} to "%{hosts::%{_index}%}%"
+
+            loop {host.players::%{_hostId}%::*}:
+
+                if "%uuid of loop-value%" is {_myUuid}:
+
+                    if "%{host.owner.uuid::%{_hostId}%}%" is not {_myUuid}:
+                        leaveHost(player, {_hostId})
+                        set {_found} to true
+
+                    stop loop
+
+            if {_found} is true:
+                stop
+
+            add 1 to {_index}
+
+        if {_found} is false:
+            send "&6&lNectar &8» &cYou are not in a queue."
+
+
+on quit:
+    set {_uuid} to "%uuid of player%"
+    delete {activehosts.mode::%{_uuid}%}
+    delete {activehosts.slot::%{_uuid}%::*}

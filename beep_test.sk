@@ -1,0 +1,239 @@
+options:
+    prefix: &6&lNectar Wars &8»
+
+command /beepset <text>:
+    permission: host
+    trigger:
+
+        if arg-1 is "red":
+            set {beep.red} to location of player
+            send "{@prefix} &cRed &flocation set."
+            stop
+
+        if arg-1 is "blue":
+            set {beep.blue} to location of player
+            send "{@prefix} &9Blue &flocation set."
+            stop
+
+        send "{@prefix} &cUsage: /beepset <red/blue>"
+
+
+every 2 ticks:
+    if {beep.active} is true:
+
+        loop {beep.players::*}:
+
+            set {_uuid} to uuid of loop-value
+
+            if {beep.eliminated::%{_uuid}%} is not set:
+
+                if {beep.reached::%{_uuid}%} is not set:
+
+                    if {beep.target} is "blue":
+                        set {_distance} to distance between location of loop-value and {beep.blue}
+                    else:
+                        set {_distance} to distance between location of loop-value and {beep.red}
+
+                    if {_distance} <= 3:
+
+                        set {beep.reached::%{_uuid}%} to true
+
+                        add 1 to {beep.streak::%{_uuid}%}
+                        set {beep.misses::%{_uuid}%} to 0
+
+                        set {_streak} to {beep.streak::%{_uuid}%}
+
+                        if {beep.first} is false:
+
+                            set {beep.first} to true
+
+                            add 5 to {points::%{_uuid}%}
+                            add 5 to {beep.points::%{_uuid}%}
+
+                            send "{@prefix} &a&l+5 POINTS &7You were first!" to loop-value
+
+                        if {_streak} > 1:
+
+                            add 1 to {points::%{_uuid}%}
+                            add 1 to {beep.points::%{_uuid}%}
+
+                            send "{@prefix} &e&l+1 POINT &7Streak: &e%{_streak}%" to loop-value
+
+                        else:
+                            send "{@prefix} &aRun complete! &7Streak: &e%{_streak}%" to loop-value
+
+
+every 1 second:
+    if {beep.active} is true:
+
+        subtract 1 from {beep.timer}
+
+        execute console command "execute as @a at @s run playsound block.note_block.bell master @s 1 1"
+
+        if {beep.timer} <= 0:
+
+            set {_alive} to 0
+            set {_finished} to 0
+
+            loop {beep.players::*}:
+
+                set {_uuid} to uuid of loop-value
+
+                if {beep.eliminated::%{_uuid}%} is not set:
+
+                    add 1 to {_alive}
+
+                    if {beep.reached::%{_uuid}%} is set:
+                        add 1 to {_finished}
+
+                    else:
+
+                        add 1 to {beep.misses::%{_uuid}%}
+                        set {beep.streak::%{_uuid}%} to 0
+
+                        if {beep.misses::%{_uuid}%} >= 2:
+
+                            set {beep.eliminated::%{_uuid}%} to true
+                            set loop-value's gamemode to spectator
+
+                            if {beep.spectator} is set:
+                                teleport loop-value to {beep.spectator}
+
+                            send "{@prefix} &c&lELIMINATED" to loop-value
+                            send "{@prefix} &7You missed two runs in a row." to loop-value
+
+                            broadcast "{@prefix} &c%loop-value% &7has been eliminated."
+
+                        else:
+
+                            send "{@prefix} &cYou missed the run!" to loop-value
+                            send "{@prefix} &7Consecutive misses: &c1/2" to loop-value
+
+            set {_alive} to 0
+
+            loop {beep.players::*}:
+                if {beep.eliminated::%uuid of loop-value%} is not set:
+                    add 1 to {_alive}
+
+            if {_alive} <= 1:
+
+                set {_winner} to none
+
+                loop {beep.players::*}:
+                    if {beep.eliminated::%uuid of loop-value%} is not set:
+                        set {_winner} to loop-value
+
+                set {beep.active} to false
+                set {nw.status} to "Waiting"
+
+                broadcast ""
+                broadcast "{@prefix} &6&lBEEP TEST COMPLETE"
+                broadcast ""
+
+                if {_winner} is set:
+                    broadcast "&eWinner: &f%{_winner}%"
+                else:
+                    broadcast "&cNo winner."
+
+                broadcast ""
+
+                loop {beep.players::*}:
+                    if {beep.eliminated::%uuid of loop-value%} is not set:
+                        set loop-value's gamemode to adventure
+
+                delete {beep.players::*}
+                delete {beep.eliminated::*}
+                delete {beep.reached::*}
+                delete {beep.misses::*}
+                delete {beep.streak::*}
+                delete {beep.points::*}
+                delete {beep.round}
+                delete {beep.target}
+                delete {beep.timer}
+                delete {beep.first}
+                delete {beep.spectator}
+
+                stop
+
+            # Current run finished
+
+            delete {beep.reached::*}
+            set {beep.first} to false
+
+            if {beep.target} is "blue":
+
+                set {beep.target} to "red"
+                set {beep.timer} to 7
+
+                broadcast ""
+                broadcast "{@prefix} &c&lRUN TO RED"
+                broadcast ""
+
+            else:
+
+                if {beep.round} is 1:
+
+                    set {beep.round} to 2
+                    set {beep.target} to "blue"
+                    set {beep.timer} to 7
+
+                    loop {beep.players::*}:
+                        if {beep.eliminated::%uuid of loop-value%} is not set:
+                            teleport loop-value to {beep.red}
+                            set loop-value's gamemode to adventure
+
+                    broadcast ""
+                    broadcast "{@prefix} &6&lROUND 2"
+                    broadcast "&fRUN TO &9&lBLUE"
+                    broadcast ""
+
+                else:
+
+                    set {_winner} to none
+                    set {_highest} to -1
+
+                    loop {beep.players::*}:
+
+                        set {_uuid} to uuid of loop-value
+
+                        if {beep.eliminated::%{_uuid}%} is not set:
+
+                            set {_score} to {beep.points::%{_uuid}%}
+
+                            if {_score} is not set:
+                                set {_score} to 0
+
+                            if {_score} > {_highest}:
+                                set {_highest} to {_score}
+                                set {_winner} to loop-value
+
+                    set {beep.active} to false
+                    set {nw.status} to "Waiting"
+
+                    broadcast ""
+                    broadcast "{@prefix} &6&lBEEP TEST COMPLETE"
+                    broadcast ""
+
+                    if {_winner} is set:
+                        broadcast "&eWinner: &f%{_winner}%"
+                        broadcast "&7Beep Test points: &6%{_highest}%"
+                    else:
+                        broadcast "&cNo winner."
+
+                    broadcast ""
+
+                    loop {beep.players::*}:
+                        if {beep.eliminated::%uuid of loop-value%} is not set:
+                            set loop-value's gamemode to adventure
+
+                    delete {beep.players::*}
+                    delete {beep.eliminated::*}
+                    delete {beep.reached::*}
+                    delete {beep.misses::*}
+                    delete {beep.streak::*}
+                    delete {beep.points::*}
+                    delete {beep.round}
+                    delete {beep.target}
+                    delete {beep.timer}
+                    delete {beep.first}
+                    delete {beep.spectator}

@@ -1,0 +1,200 @@
+options:
+    prefix: &6&lNectar &8»
+
+# game specific host menus. hostgui.sk opens these from the
+# button in the Host Settings menu.
+
+function openGameSettings(p: player):
+    set {_hostId} to getPlayerHost({_p})
+    if {_hostId} is not set:
+        stop
+
+    set {_game} to {host.game::%{_hostId}%}
+
+    if {_game} is "Spleef":
+        openSpleefSettings({_p})
+    else if {_game} is "Speed Builders":
+        openSBSettings({_p})
+
+
+# ---------------- spleef ----------------
+
+function openSpleefSettings(p: player):
+    set {_hostId} to getPlayerHost({_p})
+    if {_hostId} is not set:
+        stop
+
+    set {_mode} to getSpleefMode({_hostId})
+    set {_border} to getSpleefBorder({_hostId})
+    set {_decay} to getSpleefDecay({_hostId})
+
+    set {_inv} to chest inventory with 3 rows named "&6&lSpleef Settings"
+
+    loop integers from 0 to 26:
+        set slot loop-value of {_inv} to gray stained glass pane named " "
+
+    set slot 4 of {_inv} to book named "&e&lSpleef Settings" with lore "&7Mode: &f%{_mode}%" and "&7Decay: &f%{_decay}%"
+
+    set slot 10 of {_inv} to snowball named "&b&lNormal Spleef" with lore "&7Shovel + snowballs."
+    set slot 12 of {_inv} to bow named "&6&lTNT Spleef" with lore "&7Bow clears a 3x3 area." and "&7Crossbow launches you up."
+
+    if {_border} is true:
+        set slot 14 of {_inv} to red concrete named "&c&lBorder: ON" with lore "&7Hex border shrinks and" and "&7hurts anyone outside it." and "" and "&eClick to turn off"
+    else:
+        set slot 14 of {_inv} to white concrete named "&f&lBorder: OFF" with lore "&7No shrinking border." and "" and "&eClick to turn on"
+
+    set slot 16 of {_inv} to oak leaves named "&e&lDecay" with lore "&7Current: &f%{_decay}%" and "&7Pick one below."
+
+    set slot 19 of {_inv} to barrier named "&f&lNo Decay" with lore "&7Floor stays until players break it."
+    set slot 21 of {_inv} to grass block named "&a&lRandom Decay" with lore "&7Random blocks warn for 5s" and "&7then vanish."
+    set slot 23 of {_inv} to red concrete named "&c&lBorder Decay" with lore "&7Anything outside the red" and "&7border disappears."
+    set slot 25 of {_inv} to arrow named "&7&lBack"
+
+    open {_inv} to {_p}
+
+
+on inventory click:
+    if name of event-inventory is "&6&lSpleef Settings":
+        cancel event
+        set {_hostId} to getPlayerHost(player)
+        if {_hostId} is not set:
+            close player's inventory
+            stop
+
+        if clicked slot is 10:
+            set {spleef.host.mode::%{_hostId}%} to "spleef"
+            send "{@prefix} &aGame mode set to &eSpleef&a." to player
+            openSpleefSettings(player)
+            stop
+
+        if clicked slot is 12:
+            set {spleef.host.mode::%{_hostId}%} to "tnt"
+            send "{@prefix} &aGame mode set to &eTNT Spleef&a." to player
+            openSpleefSettings(player)
+            stop
+
+        if clicked slot is 14:
+            if {spleef.host.border::%{_hostId}%} is false:
+                set {spleef.host.border::%{_hostId}%} to true
+            else:
+                set {spleef.host.border::%{_hostId}%} to false
+            openSpleefSettings(player)
+            stop
+
+        if clicked slot is 19:
+            set {spleef.host.decay::%{_hostId}%} to "none"
+            openSpleefSettings(player)
+            stop
+
+        if clicked slot is 21:
+            set {spleef.host.decay::%{_hostId}%} to "random"
+            openSpleefSettings(player)
+            stop
+
+        if clicked slot is 23:
+            set {spleef.host.decay::%{_hostId}%} to "border"
+            openSpleefSettings(player)
+            stop
+
+        if clicked slot is 25:
+            openHostSettings(player)
+            stop
+
+
+# ---------------- speed builders ----------------
+
+function openSBSettings(p: player):
+    set {_hostId} to getPlayerHost({_p})
+    if {_hostId} is not set:
+        stop
+
+    set {_rounds} to getSBRounds({_hostId})
+    set {_time} to getSBTime({_hostId})
+    set {_repeat} to getSBRepeat({_hostId})
+
+    set {_inv} to chest inventory with 4 rows named "&e&lSpeed Builders Settings"
+
+    loop integers from 0 to 35:
+        set slot loop-value of {_inv} to gray stained glass pane named " "
+
+    set slot 4 of {_inv} to book named "&e&lSpeed Builders" with lore "&7%{_rounds}% rounds, %{_time}%s each"
+
+    # rounds row
+    set slot 10 of {_inv} to red wool named "&c&l- 1 Round"
+    set slot 13 of {_inv} to paper named "&f&lRounds" with lore "&7Current: &e%{_rounds}%" and "&8Min 1, max 5"
+    set slot 16 of {_inv} to lime wool named "&a&l+ 1 Round"
+
+    # round time row
+    set slot 19 of {_inv} to red wool named "&c&l- 15s"
+    set slot 22 of {_inv} to clock named "&f&lRound Time" with lore "&7Current: &e%{_time}% seconds" and "&8Min 30, max 180"
+    set slot 25 of {_inv} to lime wool named "&a&l+ 15s"
+
+    set slot 27 of {_inv} to arrow named "&7&lBack"
+
+    if {_repeat} is true:
+        set slot 31 of {_inv} to lime concrete named "&a&lRepeat Builds: ON" with lore "&7Builds can come up again," and "&7just never twice in a row." and "" and "&eClick to turn off"
+    else:
+        set slot 31 of {_inv} to red concrete named "&c&lRepeat Builds: OFF" with lore "&7Every build shows up once" and "&7before any repeat." and "" and "&eClick to turn on"
+
+    open {_inv} to {_p}
+
+
+on inventory click:
+    if name of event-inventory is "&e&lSpeed Builders Settings":
+        cancel event
+        set {_hostId} to getPlayerHost(player)
+        if {_hostId} is not set:
+            close player's inventory
+            stop
+
+        set {_rounds} to getSBRounds({_hostId})
+        set {_time} to getSBTime({_hostId})
+
+        # rounds -
+        if clicked slot is 10:
+            if {_rounds} > 1:
+                set {sb.host.rounds::%{_hostId}%} to {_rounds} - 1
+            openSBSettings(player)
+            stop
+
+        # rounds +
+        if clicked slot is 16:
+            if {_rounds} < 5:
+                set {sb.host.rounds::%{_hostId}%} to {_rounds} + 1
+            openSBSettings(player)
+            stop
+
+        # time -
+        if clicked slot is 19:
+            if {_time} > 30:
+                set {sb.host.time::%{_hostId}%} to {_time} - 15
+            openSBSettings(player)
+            stop
+
+        # time +
+        if clicked slot is 25:
+            if {_time} < 180:
+                set {sb.host.time::%{_hostId}%} to {_time} + 15
+            openSBSettings(player)
+            stop
+
+        # repeat toggle
+        if clicked slot is 31:
+            if getSBRepeat({_hostId}) is true:
+                set {sb.host.repeat::%{_hostId}%} to false
+            else:
+                set {sb.host.repeat::%{_hostId}%} to true
+            openSBSettings(player)
+            stop
+
+        # back
+        if clicked slot is 27:
+            openHostSettings(player)
+            stop
+
+
+on inventory drag:
+    if name of event-inventory is "&6&lSpleef Settings":
+        cancel event
+    if name of event-inventory is "&e&lSpeed Builders Settings":
+        cancel event

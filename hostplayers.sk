@@ -1,0 +1,51 @@
+options:
+    prefix: &6&lNectar &8»
+
+
+command /hostplayers:
+    trigger:
+
+        if isHost(player) is false:
+            send "{@prefix} &cYou are not hosting a game."
+            stop
+
+        set {_id} to uuid of player
+
+        open chest inventory with 3 rows named "&b&lHost Players" to player
+
+        set {_slot} to 10
+
+        loop {host.players::%{_id}%::*}:
+
+            set {_target} to loop-value
+
+            # Actual player's skull
+            set {_head} to {_target}'s skull
+
+            set name of {_head} to "&f%name of {_target}%"
+            set lore of {_head} to "&7Currently in your host."
+
+            set slot {_slot} of player's current inventory to {_head}
+
+            add 1 to {_slot}
+
+            if {_slot} >= 17:
+                stop loop
+
+        set slot 22 of player's current inventory to arrow named "&7Back"
+
+
+on inventory click:
+
+    if name of event-inventory is "&b&lHost Players":
+        cancel event
+
+        if clicked slot is 22:
+            execute player command "/hostcontrols"
+            stop
+
+
+on inventory drag:
+
+    if name of event-inventory is "&b&lHost Players":
+        cancel event

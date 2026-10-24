@@ -1,0 +1,314 @@
+options:
+    prefix: &6&lNectar &8»
+
+command /spleeftnt <text>:
+    permission: op
+    trigger:
+        set {_mode} to lowercase arg-1
+        if {_mode} is "on":
+            set {spleef.mode} to "tnt"
+            send "{@prefix} &cTNT Spleef mode enabled."
+            stop
+        if {_mode} is "off":
+            set {spleef.mode} to "normal"
+            send "{@prefix} &aNormal Spleef mode enabled."
+            stop
+        send "{@prefix} &7Use &f/spleeftnt on &7or &f/spleeftnt off&7."
+
+command /setspleefspawn:
+    permission: op
+    trigger:
+        set {spleef.spawn} to location of player
+        send "{@prefix} &aSpleef spawn set."
+
+command /setspleeffall:
+    permission: op
+    trigger:
+        set {spleef.fall-y} to y-coordinate of player
+        send "{@prefix} &aSpleef elimination Y level set to &e%{spleef.fall-y}%&a."
+
+command /setspleefspectator:
+    permission: op
+    trigger:
+        set {spleef.spectator} to location of player
+        send "{@prefix} &aSpleef spectator location set."
+
+
+every 5 ticks:
+    if {spleef.host} is set:
+        if {spleef.active} is not true:
+            if {spleef.round} is 1:
+                if {spleef.mode} is "tnt":
+                    if {spleef.tntArenaLoaded} is not true:
+                        if {spleef.host} is online:
+                            make {spleef.host} execute command "//schem load tnt_spleef_arena.schem"
+                            make {spleef.host} execute command "//paste -o"
+                            set {spleef.tntArenaLoaded} to true
+
+every 2 ticks:
+    if {spleef.active} is true:
+        loop {spleef.players::*}:
+            set {_player} to loop-value
+
+            if {_player} is online:
+                if {spleef.eliminated::%uuid of {_player}%} is not true:
+
+                    if y-coordinate of {_player} is less than {spleef.fall-y}:
+                        set {_dead} to {_player}
+                        set {_deadUUID} to uuid of {_dead}
+
+                        set {_killerUUID} to {spleef.lastHit::%{_deadUUID}%}
+
+                        if {_killerUUID} is not set:
+                            set {_killerUUID} to {spleef.lastBreaker::%location of block below {_dead}%}
+
+                        if {_killerUUID} is set:
+                            if {_killerUUID} is not {_deadUUID}:
+                                add 1 to {spleef.kills::%{_killerUUID}%}
+                                add 50 to {spleef.points::%{_killerUUID}%}
+
+                        set {spleef.eliminated::%{_deadUUID}%} to true
+
+                        set {_dead}'s gamemode to spectator
+
+                        if {spleef.spectator} is set:
+                            teleport {_dead} to {spleef.spectator}
+
+                        add 5 to {spleef.points::%{_deadUUID}%}
+
+                        broadcast "&c%{_dead}% &7has been eliminated."
+
+                    set {_mined} to {spleef.mined::%uuid of {_player}%}
+
+                    if {_mined} is not set:
+                        set {_mined} to 0
+
+                    if {_mined} < 15:
+                        send action bar "&7⛏ Diamond Shovel: &e%{_mined}%&7/15" to {_player}
+                    else:
+                        set {_snowballs} to {spleef.snowballcount::%uuid of {_player}%}
+
+                        if {_snowballs} is not set:
+                            set {_snowballs} to 0
+
+                        send action bar "&7❄ Snowball: &e%{_snowballs}%&7/25" to {_player}
+
+
+every 5 ticks:
+    if {spleef.active} is true:
+
+        delete {_aliveTeams::*}
+
+        loop {spleef.players::*}:
+            set {_player} to loop-value
+
+            if {_player} is online:
+                if {spleef.eliminated::%uuid of {_player}%} is not true:
+
+                    set {_team} to {nw.team::%{_player}%}
+
+                    if {_team} is set:
+                        if {_team} is not in {_aliveTeams::*}:
+                            add {_team} to {_aliveTeams::*}
+
+        if size of {_aliveTeams::*} is 1:
+
+            set {_winningTeam} to {_aliveTeams::1}
+
+            set {spleef.active} to false
+            set {spleef.changinground} to true
+
+            loop {spleef.players::*}:
+                set {_player} to loop-value
+
+                if {_player} is online:
+                    if {nw.team::%{_player}%} is {_winningTeam}:
+                        add 250 to {spleef.points::%uuid of {_player}%}
+
+            broadcast ""
+            broadcast "&6&lROUND %{spleef.round}% COMPLETE!"
+            broadcast "&e%{_winningTeam}% &7wins the round!"
+            broadcast ""
+
+            if {spleef.round} < 3:
+
+                add 1 to {spleef.round}
+
+                wait 3 seconds
+
+                if {spleef.ended} is true:
+                    stop
+
+                if {spleef.host} is online:
+                    if {spleef.mode} is "tnt":
+                        make {spleef.host} execute command "//schem load tnt_spleef_arena.schem"
+                    else:
+                        make {spleef.host} execute command "//schem load spleef_arena.schem"
+                    make {spleef.host} execute command "//paste -o"
+
+                wait 3 seconds
+
+                delete {spleef.eliminated::*}
+                delete {spleef.mined::*}
+                delete {spleef.nextball::*}
+                delete {spleef.snowballcount::*}
+                delete {spleef.snowballShooter::*}
+                delete {spleef.lastHit::*}
+                delete {spleef.lastBreaker::*}
+
+                loop {spleef.players::*}:
+                    set {_player} to loop-value
+
+                    if {_player} is online:
+                        teleport {_player} to {spleef.spawn}
+                        clear {_player}'s inventory
+                        give stone shovel to {_player}
+                        set {_player}'s gamemode to adventure
+
+                        set {spleef.eliminated::%uuid of {_player}%} to false
+                        set {spleef.mined::%uuid of {_player}%} to 0
+                        set {spleef.snowballcount::%uuid of {_player}%} to 0
+                        set {spleef.nextball::%uuid of {_player}%} to 25
+
+                broadcast ""
+                broadcast "&6&lROUND %{spleef.round}% OF 3"
+                broadcast ""
+
+                wait 2 seconds
+
+                broadcast "&6&lSTARTING IN 5"
+                wait 1 second
+
+                broadcast "&e&l4"
+                wait 1 second
+
+                broadcast "&e&l3"
+                wait 1 second
+
+                broadcast "&e&l2"
+                wait 1 second
+
+                broadcast "&a&l1"
+                wait 1 second
+
+                loop {spleef.players::*}:
+                    set {_player} to loop-value
+
+                    if {_player} is online:
+                        set {_player}'s gamemode to survival
+
+                set {spleef.changinground} to false
+                set {spleef.active} to true
+
+            else:
+
+                set {spleef.active} to false
+                set {spleef.changinground} to false
+
+                loop {spleef.players::*}:
+                    set {_player} to loop-value
+
+                    if {_player} is online:
+                        set {_uuid} to uuid of {_player}
+
+                        set {_spleefKills} to {spleef.kills::%{_uuid}%}
+                        if {_spleefKills} is not set:
+                            set {_spleefKills} to 0
+
+                        set {_spleefPoints} to {spleef.points::%{_uuid}%}
+                        if {_spleefPoints} is not set:
+                            set {_spleefPoints} to 0
+
+                        set {_player}'s gamemode to adventure
+                        set {player.inGame::%{_uuid}%} to false
+
+                        clear {_player}'s inventory
+
+                        refreshNectarHotbar({_player})
+
+                        send "" to {_player}
+                        send "&6&lSPLEEF COMPLETE!" to {_player}
+                        send "&7Kills: &e%{_spleefKills}%" to {_player}
+                        send "&7Points: &e%{_spleefPoints}%" to {_player}
+                        send "" to {_player}
+
+                delete {spleef.tntArenaLoaded}
+                set {_hostId} to {spleef.hostId}
+
+                if {_hostId} is set:
+                    endHostedGame({_hostId})
+
+
+on damage:
+    if {spleef.active} is true:
+        if victim is a player:
+            if attacker is a snowball:
+
+                set {_shooterUUID} to {spleef.snowballShooter::%attacker%}
+
+                if {_shooterUUID} is set:
+                    set {spleef.lastHit::%uuid of victim%} to {_shooterUUID}
+
+
+on break:
+    if {spleef.active} is true:
+
+        if event-block is snow block:
+            cancel drops
+
+            if {spleef.mode} is "tnt":
+                if block below event-block is tnt:
+                    set {_tntLoc} to location of block below event-block
+                    set block below event-block to air
+                    set {_x} to x-coordinate of {_tntLoc}
+                    set {_y} to y-coordinate of {_tntLoc}
+                    set {_z} to z-coordinate of {_tntLoc}
+                    execute console command "summon tnt %{_x}% %{_y}% %{_z}%"
+
+            set {spleef.lastBreaker::%location of event-block%} to uuid of player
+
+            add 1 to {spleef.mined::%uuid of player%}
+            add 1 to {spleef.snowballcount::%uuid of player%}
+
+            set {_mined} to {spleef.mined::%uuid of player%}
+
+            if {_mined} is 15:
+                set player's tool to diamond shovel
+                enchant player's tool with efficiency 10
+                enchant player's tool with unbreaking 255
+
+            if {spleef.snowballcount::%uuid of player%} >= 25:
+                give 1 snowball to player
+                remove 25 from {spleef.snowballcount::%uuid of player%}
+
+
+every 5 ticks:
+    if {spleef.active} is true:
+        loop {spleef.players::*}:
+            set {_player} to loop-value
+
+            if {_player} is online:
+                if {_player}'s tool is stone shovel:
+                    repair {_player}'s tool
+
+                if {_player}'s tool is diamond shovel:
+                    repair {_player}'s tool
+
+
+on shoot:
+    if {spleef.active} is true:
+        if projectile is snowball:
+            set {spleef.snowballShooter::%projectile%} to uuid of shooter
+
+
+on projectile hit:
+    if projectile is snowball:
+        if {spleef.active} is true:
+            if event-block is snow block:
+
+                set {_shooterUUID} to {spleef.snowballShooter::%projectile%}
+
+                if {_shooterUUID} is set:
+                    set {spleef.lastBreaker::%location of event-block%} to {_shooterUUID}
+
+                set event-block to air

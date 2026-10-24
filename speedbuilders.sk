@@ -1,0 +1,1533 @@
+options:
+    sb.round-time: 60
+    sb.rounds: 3
+
+
+
+
+# =========================================================
+# PLAYER SKIN + ALL-TIME STATS DISPLAY
+# =========================================================
+
+function removeSBPlayerDisplay(p: player):
+    set {_uuid} to uuid of {_p}
+
+    execute console command "kill @e[tag=sb_player_display_%{_uuid}%]"
+    execute console command "kill @e[tag=sb_player_display_%{_uuid}%_games]"
+    execute console command "kill @e[tag=sb_player_display_%{_uuid}%_wins]"
+    execute console command "kill @e[tag=sb_player_display_%{_uuid}%_builds]"
+
+    delete {sb.display.spawned::%{_uuid}%}
+
+
+function spawnSBPlayerDisplay(p: player):
+    set {_uuid} to uuid of {_p}
+    set {_plot} to {sb.plotOf::%{_uuid}%}
+
+    if {_plot} is not set:
+        stop
+
+    removeSBPlayerDisplay({_p})
+
+
+    set {_display} to {sb.display.location}
+
+    if {_display} is not set:
+        send "&cSpeed Builders display location has not been set. Use /sbsetdisplay." to {_p}
+        stop
+
+    set {_name} to name of {_p}
+
+
+    # =====================================================
+    # ALL-TIME STATS
+    # =====================================================
+
+    set {_games} to {sb.stats.games::%{_uuid}%}
+    set {_wins} to {sb.stats.wins::%{_uuid}%}
+    set {_builds} to {sb.stats.builds::%{_uuid}%}
+
+    if {_games} is not set:
+        set {_games} to 0
+
+    if {_wins} is not set:
+        set {_wins} to 0
+
+    if {_builds} is not set:
+        set {_builds} to 0
+
+
+    # =====================================================
+    # WORLD / COORDINATES
+    # =====================================================
+
+    set {_buildWorld} to world of {_display}
+
+    set {_x} to x-coordinate of {_display}
+    set {_y} to y-coordinate of {_display}
+    set {_z} to z-coordinate of {_display}
+
+
+    # =====================================================
+    # MANNEQUIN
+    # =====================================================
+    #
+    # Rotation 51.3 degrees makes the mannequin face
+    # toward the player standing at the front of the plot.
+    # =====================================================
+
+    execute console command "execute in %name of {_buildWorld}% run summon minecraft:mannequin %{_x}% %{_y}% %{_z}% {profile:{name:'%{_name}%'},immovable:1b,Rotation:[51.3f,0f],Tags:['sb_player_display_%{_uuid}%']}"
+
+
+    # =====================================================
+    # GAMES PLAYED
+    # =====================================================
+
+    set {_textLoc} to {_display}
+    add 2.25 to y-coordinate of {_textLoc}
+
+    set {_tx} to x-coordinate of {_textLoc}
+    set {_ty} to y-coordinate of {_textLoc}
+    set {_tz} to z-coordinate of {_textLoc}
+
+    execute console command "execute in %name of {_buildWorld}% run summon minecraft:text_display %{_tx}% %{_ty}% %{_tz}% {text:{text:'GAMES PLAYED: %{_games}%',color:'gold',bold:true},billboard:'center',Tags:['sb_player_display_%{_uuid}%','sb_player_display_%{_uuid}%_games']}"
+
+
+    # =====================================================
+    # GAMES WON
+    # =====================================================
+
+    add 0.32 to y-coordinate of {_textLoc}
+
+    set {_ty} to y-coordinate of {_textLoc}
+
+    execute console command "execute in %name of {_buildWorld}% run summon minecraft:text_display %{_tx}% %{_ty}% %{_tz}% {text:{text:'GAMES WON: %{_wins}%',color:'gold',bold:true},billboard:'center',Tags:['sb_player_display_%{_uuid}%','sb_player_display_%{_uuid}%_wins']}"
+
+
+    # =====================================================
+    # BUILDS COMPLETE
+    # =====================================================
+
+    add 0.32 to y-coordinate of {_textLoc}
+
+    set {_ty} to y-coordinate of {_textLoc}
+
+    execute console command "execute in %name of {_buildWorld}% run summon minecraft:text_display %{_tx}% %{_ty}% %{_tz}% {text:{text:'BUILDS COMPLETE: %{_builds}%',color:'gold',bold:true},billboard:'center',Tags:['sb_player_display_%{_uuid}%','sb_player_display_%{_uuid}%_builds']}"
+
+
+    set {sb.display.spawned::%{_uuid}%} to true
+
+
+# =========================================================
+# TEMPLATE SETUP
+# =========================================================
+
+command /sbsettemplate:
+    trigger:
+
+        set player's gamemode to survival
+
+        set {_uuid} to uuid of player
+
+        # Each player has their own current template position
+        set {sb.template.origin::%{_uuid}%} to location of block at player
+
+        send "&6&lNectar &8» &aYour template position has been set."
+        send "&7Build your 5x5 template here."
+
+
+command /sbsavetemplate <text>:
+    trigger:
+
+        set {_uuid} to uuid of player
+
+        if {sb.template.origin::%{_uuid}%} is not set:
+            send "&6&lNectar &8» &cUse /sbsettemplate first."
+            stop
+
+        set {_name} to arg-1
+        set {_origin} to {sb.template.origin::%{_uuid}%}
+
+        # Unique internal ID
+        set {_id} to "%{_uuid}%-%{_name}%"
+
+        # Remember exactly where this template was saved.
+        set {sb.template.location::%{_id}%} to {_origin}
+
+        delete {sb.template.data::%{_id}%::*}
+        delete {sb.template.type::%{_id}%::*}
+
+        set {_x} to 0
+
+        while {_x} < 5:
+
+            set {_z} to 0
+
+            while {_z} < 5:
+
+                set {_loc} to {_origin}
+
+                add {_x} to x-coordinate of {_loc}
+                add {_z} to z-coordinate of {_loc}
+
+                set {sb.template.data::%{_id}%::%{_x}%::%{_z}%} to block data of block at {_loc}
+                set {sb.template.type::%{_id}%::%{_x}%::%{_z}%} to type of block at {_loc}
+
+                add 1 to {_z}
+
+            add 1 to {_x}
+
+
+        # Add to shared template list
+        if {sb.templates::*} does not contain {_id}:
+            add {_id} to {sb.templates::*}
+
+        # Save readable name
+        set {sb.template.name::%{_id}%} to {_name}
+        set {sb.template.author::%{_id}%} to name of player
+
+        send "&6&lNectar &8» &aTemplate &e%{_name}% &asaved!"
+        send "&7Created by &e%name of player%&7."
+
+        # Clear this player's workspace
+        delete {sb.template.origin::%{_uuid}%}
+
+        set player's gamemode to adventure
+        refreshNectarHotbar(player)
+
+
+command /sbcleartemplates:
+    permission: op
+    trigger:
+
+        delete {sb.templates::*}
+        delete {sb.template.data::*}
+        delete {sb.template.type::*}
+        delete {sb.template.name::*}
+        delete {sb.template.author::*}
+        delete {sb.template.location::*}
+        delete {sb.template.origin::*}
+
+        send "&6&lNectar &8» &aAll Speed Builders templates cleared."
+
+
+# =========================================================
+# PLOT SETUP
+# =========================================================
+
+command /sbsetplot <number>:
+    permission: op
+    trigger:
+
+        if arg-1 < 1:
+            send "&6&lNectar &8» &cPlot number must be 1-24."
+            stop
+
+        if arg-1 > 24:
+            send "&6&lNectar &8» &cPlot number must be 1-24."
+            stop
+
+
+        # Saves the exact block, not player's decimal position
+        set {sb.plot::%arg-1%} to location of block at player
+
+        set {_origin} to {sb.plot::%arg-1%}
+
+
+        set {_x} to 0
+
+        while {_x} < 5:
+
+            set {_z} to 0
+
+            while {_z} < 5:
+
+                set {_floor} to {_origin}
+
+                add {_x} to x-coordinate of {_floor}
+                add {_z} to z-coordinate of {_floor}
+                subtract 1 from y-coordinate of {_floor}
+
+                set block at {_floor} to smooth stone
+
+
+                set {_build} to {_origin}
+
+                add {_x} to x-coordinate of {_build}
+                add {_z} to z-coordinate of {_build}
+
+                set block at {_build} to air
+
+
+                add 1 to {_z}
+
+            add 1 to {_x}
+
+
+        send "&6&lNectar &8» &aPlot &e%arg-1% &asaved!"
+        send "&7Build area: &e5x5 &7with unlimited height."
+
+
+# =========================================================
+# CLEAR BUILD AREA
+# =========================================================
+
+function clearSBPlot(loc: location):
+
+    # Clears the whole 5x5 build area vertically.
+    # The saved plot location is the first build block,
+    # so the floor at Y-1 is left untouched.
+
+    set {_x} to 0
+
+    while {_x} < 5:
+
+        set {_z} to 0
+
+        while {_z} < 5:
+
+            set {_y} to 0
+
+            while {_y} < 5:
+
+                set {_block} to {_loc}
+                add {_x} to x-coordinate of {_block}
+                add {_z} to z-coordinate of {_block}
+                add {_y} to y-coordinate of {_block}
+
+                set block at {_block} to air
+
+                add 1 to {_y}
+
+            add 1 to {_z}
+
+        add 1 to {_x}
+
+
+# =========================================================
+# CLEAR TARGET
+# =========================================================
+
+function clearSBTarget(p: player):
+
+    set {_uuid} to uuid of {_p}
+    set {_target} to {sb.targetOf::%{_uuid}%}
+
+    if {_target} is not set:
+        stop
+
+
+    set {_x} to 0
+
+    while {_x} < 5:
+
+        set {_y} to 0
+
+        while {_y} < 5:
+
+            set {_block} to {_target}
+
+            add {_x} to x-coordinate of {_block}
+            add {_y} to y-coordinate of {_block}
+
+            set block at {_block} to air
+
+            add 1 to {_y}
+
+        add 1 to {_x}
+
+
+    delete {sb.targetOf::%{_uuid}%}
+
+
+# =========================================================
+# PLACE TARGET
+# =========================================================
+
+function placeSBTarget(p: player):
+
+    set {_uuid} to uuid of {_p}
+
+    set {_template} to {sb.currentTemplate::%{_uuid}%}
+    set {_plot} to {sb.plotOf::%{_uuid}%}
+
+
+    if {_template} is not set:
+        stop
+
+    if {_plot} is not set:
+        stop
+
+
+    clearSBTarget({_p})
+
+
+    set {_target} to {_plot}
+
+    # Target is north of the build plot
+    subtract 8 from z-coordinate of {_target}
+
+    # Bottom of target wall
+    add 1 to y-coordinate of {_target}
+
+    set {sb.targetOf::%{_uuid}%} to {_target}
+
+
+    set {_x} to 0
+
+    while {_x} < 5:
+
+        set {_z} to 0
+
+        while {_z} < 5:
+
+            set {_targetBlock} to {_target}
+
+            add {_x} to x-coordinate of {_targetBlock}
+
+
+            # =================================================
+            # FLIP VERTICAL ORDER
+            # =================================================
+            #
+            # Template Z=0 becomes top of target.
+            # Template Z=4 becomes bottom.
+            #
+            # This fixes the upside-down target.
+            # =================================================
+
+            set {_vertical} to 4 - {_z}
+
+            add {_vertical} to y-coordinate of {_targetBlock}
+
+
+            set {_data} to {sb.template.data::%{_template}%::%{_x}%::%{_z}%}
+            set {_type} to {sb.template.type::%{_template}%::%{_x}%::%{_z}%}
+
+
+            if {_data} is set:
+
+
+                # =================================================
+                # LOG ORIENTATION FIX
+                # =================================================
+                #
+                # The flat template uses Z as one horizontal
+                # direction.
+                #
+                # The vertical target uses Y in that direction.
+                #
+                # Therefore Z-axis logs become Y-axis logs.
+                # =================================================
+
+                if "%{_data}%" contains "axis=z":
+
+                    if {_type} is oak log:
+                        set block at {_targetBlock} to oak log[axis=y]
+
+                    else if {_type} is spruce log:
+                        set block at {_targetBlock} to spruce log[axis=y]
+
+                    else if {_type} is birch log:
+                        set block at {_targetBlock} to birch log[axis=y]
+
+                    else if {_type} is jungle log:
+                        set block at {_targetBlock} to jungle log[axis=y]
+
+                    else if {_type} is acacia log:
+                        set block at {_targetBlock} to acacia log[axis=y]
+
+                    else if {_type} is dark oak log:
+                        set block at {_targetBlock} to dark oak log[axis=y]
+
+                    else if {_type} is mangrove log:
+                        set block at {_targetBlock} to mangrove log[axis=y]
+
+                    else if {_type} is cherry log:
+                        set block at {_targetBlock} to cherry log[axis=y]
+
+                    else if {_type} is pale oak log:
+                        set block at {_targetBlock} to pale oak log[axis=y]
+
+                    else if {_type} is stripped oak log:
+                        set block at {_targetBlock} to stripped oak log[axis=y]
+
+                    else if {_type} is stripped spruce log:
+                        set block at {_targetBlock} to stripped spruce log[axis=y]
+
+                    else if {_type} is stripped birch log:
+                        set block at {_targetBlock} to stripped birch log[axis=y]
+
+                    else if {_type} is stripped jungle log:
+                        set block at {_targetBlock} to stripped jungle log[axis=y]
+
+                    else if {_type} is stripped acacia log:
+                        set block at {_targetBlock} to stripped acacia log[axis=y]
+
+                    else if {_type} is stripped dark oak log:
+                        set block at {_targetBlock} to stripped dark oak log[axis=y]
+
+                    else if {_type} is stripped mangrove log:
+                        set block at {_targetBlock} to stripped mangrove log[axis=y]
+
+                    else if {_type} is stripped cherry log:
+                        set block at {_targetBlock} to stripped cherry log[axis=y]
+
+                    else if {_type} is stripped pale oak log:
+                        set block at {_targetBlock} to stripped pale oak log[axis=y]
+
+                    else if {_type} is crimson stem:
+                        set block at {_targetBlock} to crimson stem[axis=y]
+
+                    else if {_type} is warped stem:
+                        set block at {_targetBlock} to warped stem[axis=y]
+
+                    else if {_type} is stripped crimson stem:
+                        set block at {_targetBlock} to stripped crimson stem[axis=y]
+
+                    else if {_type} is stripped warped stem:
+                        set block at {_targetBlock} to stripped warped stem[axis=y]
+
+                    else:
+                        set block at {_targetBlock} to {_data}
+
+                else:
+
+                    set block at {_targetBlock} to {_data}
+
+
+            add 1 to {_z}
+
+        add 1 to {_x}
+
+
+# =========================================================
+# GIVE BUILD BLOCKS
+# =========================================================
+
+function giveSBBlocks(p: player):
+
+    set {_uuid} to uuid of {_p}
+    set {_template} to {sb.currentTemplate::%{_uuid}%}
+
+    if {_template} is not set:
+        stop
+
+
+    clear {_p}'s inventory
+
+
+    set {_x} to 0
+
+    while {_x} < 5:
+
+        set {_z} to 0
+
+        while {_z} < 5:
+
+            set {_type} to {sb.template.type::%{_template}%::%{_x}%::%{_z}%}
+
+            if {_type} is set:
+
+                if {_type} is not air:
+                    give 1 of {_type} to {_p}
+
+            add 1 to {_z}
+
+        add 1 to {_x}
+
+
+# =========================================================
+# NEW BUILD
+# =========================================================
+
+function giveNewSBTarget(p: player):
+
+    set {_uuid} to uuid of {_p}
+
+    if size of {sb.templates::*} <= 0:
+        stop
+
+    # Build a list containing only templates this player
+    # has NOT received during this game.
+    delete {_available::*}
+
+    loop {sb.templates::*}:
+
+        if {sb.usedTemplates::%{_uuid}%::*} does not contain loop-value:
+            add loop-value to {_available::*}
+
+    # If every template has been used, start a fresh pool.
+    # This means no build can repeat until ALL saved builds have been used.
+    if size of {_available::*} <= 0:
+        delete {sb.usedTemplates::%{_uuid}%::*}
+        delete {_available::*}
+
+        loop {sb.templates::*}:
+            add loop-value to {_available::*}
+
+    set {_new} to random element out of {_available::*}
+
+    set {sb.currentTemplate::%{_uuid}%} to {_new}
+
+    # Remember this template for the whole game.
+    add {_new} to {sb.usedTemplates::%{_uuid}%::*}
+
+    placeSBTarget({_p})
+    giveSBBlocks({_p})
+
+
+# =========================================================
+# CHECK BUILD
+# =========================================================
+
+function checkSBBuild(p: player):
+
+    set {_uuid} to uuid of {_p}
+
+    set {_template} to {sb.currentTemplate::%{_uuid}%}
+    set {_plot} to {sb.plotOf::%{_uuid}%}
+
+
+    if {_template} is not set:
+        stop
+
+    if {_plot} is not set:
+        stop
+
+
+    set {_correct} to true
+
+
+    set {_x} to 0
+
+    while {_x} < 5:
+
+        set {_z} to 0
+
+        while {_z} < 5:
+
+            set {_loc} to {_plot}
+
+            add {_x} to x-coordinate of {_loc}
+            add {_z} to z-coordinate of {_loc}
+
+
+            set {_actual} to type of block at {_loc}
+
+            set {_expected} to {sb.template.type::%{_template}%::%{_x}%::%{_z}%}
+
+
+            if {_actual} is not {_expected}:
+                set {_correct} to false
+
+
+            add 1 to {_z}
+
+        add 1 to {_x}
+
+
+    if {_correct} is true:
+
+        if {sb.completed::%{_uuid}%} is not true:
+
+
+            set {sb.completed::%{_uuid}%} to true
+
+
+            # =================================================
+            # SCORE
+            # =================================================
+
+            add 1 to {sb.score::%{_uuid}%}
+            add 1 to {sb.stats.builds::%{_uuid}%}
+
+            # Update the live BUILDS COMPLETE display without respawning the mannequin.
+            execute console command "execute in %world of {_p}% run data merge entity @e[tag=sb_player_display_%{_uuid}%_builds,limit=1] {text:{text:'BUILDS COMPLETE: %{sb.stats.builds::%{_uuid}%}%',color:'gold',bold:true}}"            
+            add 1 to {sb.roundBuilds::%{_uuid}%}
+
+
+            # =================================================
+            # TIME
+            # =================================================
+
+            set {_timeTaken} to {sb.lastBuildTime::%{_uuid}%} - {sb.time}
+
+            if {_timeTaken} < 0:
+                set {_timeTaken} to 0
+
+            add {_timeTaken} to {sb.roundTimeTotal::%{_uuid}%}
+
+            set {sb.lastBuildTime::%{_uuid}%} to {sb.time}
+
+
+            # =================================================
+            # ROUND SCORE
+            # =================================================
+
+            if {sb.round} is 1:
+                add 1 to {sb.round1::%{_uuid}%}
+
+            else if {sb.round} is 2:
+                add 1 to {sb.round2::%{_uuid}%}
+
+            else if {sb.round} is 3:
+                add 1 to {sb.round3::%{_uuid}%}
+
+
+            # =================================================
+            # AVERAGE
+            # =================================================
+
+            set {_average} to {sb.roundTimeTotal::%{_uuid}%} / {sb.roundBuilds::%{_uuid}%}
+
+
+            # =================================================
+            # CHAT
+            # =================================================
+
+            broadcast "&6&l★ &e%name of {_p}% &acompleted a build! &7(%{sb.roundBuilds::%{_uuid}%}% this round)"
+
+
+            # =================================================
+            # SOUND
+            # =================================================
+
+            play sound "entity.experience_orb.pickup" to {_p}
+
+
+            # =================================================
+            # PERSONAL MESSAGE
+            # =================================================
+
+            send "&a&l✓ CORRECT!" to {_p}
+            send "&7Time: &e%{_timeTaken}%s &8┃ &7Average: &e%{_average}%s" to {_p}
+
+
+            # =================================================
+            # NEXT BUILD
+            # =================================================
+
+            # Always move to the next build.
+            # giveNewSBTarget() guarantees no repeats until every saved
+            # build has been used, then it starts a fresh pool.
+            clearSBPlot({_plot})
+            giveNewSBTarget({_p})
+
+
+            set {sb.completed::%{_uuid}%} to false
+
+
+# =========================================================
+# START GAME
+# =========================================================
+
+function startSpeedBuilders(hostId: text):
+
+    if {host.owner::%{_hostId}%} is not set:
+        stop
+
+
+    if size of {sb.templates::*} <= 0:
+
+        set {_owner} to {host.owner::%{_hostId}%}
+
+        if {_owner} is online:
+            send "&6&lNectar &8» &cNo Speed Builders templates exist." to {_owner}
+
+        stop
+
+
+    delete {sb.players::*}
+    delete {sb.plotOf::*}
+    delete {sb.score::*}
+
+    delete {sb.round1::*}
+    delete {sb.round2::*}
+    delete {sb.round3::*}
+
+    delete {sb.roundBuilds::*}
+    delete {sb.roundTimeTotal::*}
+    delete {sb.lastBuildTime::*}
+
+    delete {sb.currentTemplate::*}
+    delete {sb.targetOf::*}
+    delete {sb.completed::*}
+    delete {sb.usedTemplates::*}
+
+
+    set {sb.hostId} to {_hostId}
+
+    set {sb.round} to 1
+    set {sb.time} to 60
+    set {sb.cooldown} to 0
+    set {sb.startCountdown} to 5
+    set {sb.active} to false
+    set {sb.ended} to false
+
+    set {host.started::%{_hostId}%} to true
+
+
+    set {sb.players::*} to {host.players::%{_hostId}%::*}
+
+
+    set {_index} to 1
+    set {_plotNumber} to 1
+
+
+    while {_index} <= size of {sb.players::*}:
+
+        set {_p} to {sb.players::%{_index}%}
+
+
+        if {_p} is online:
+
+            set {_uuid} to uuid of {_p}
+
+
+            set {sb.score::%{_uuid}%} to 0
+
+            if {sb.stats.games::%{_uuid}%} is not set:
+                set {sb.stats.games::%{_uuid}%} to 0
+            if {sb.stats.wins::%{_uuid}%} is not set:
+                set {sb.stats.wins::%{_uuid}%} to 0
+            if {sb.stats.builds::%{_uuid}%} is not set:
+                set {sb.stats.builds::%{_uuid}%} to 0
+
+            set {sb.round1::%{_uuid}%} to 0
+            set {sb.round2::%{_uuid}%} to 0
+            set {sb.round3::%{_uuid}%} to 0
+
+            set {sb.roundBuilds::%{_uuid}%} to 0
+            set {sb.roundTimeTotal::%{_uuid}%} to 0
+            set {sb.lastBuildTime::%{_uuid}%} to 60
+
+            set {sb.completed::%{_uuid}%} to false
+
+            set {player.inGame::%{_uuid}%} to true
+            add 1 to {sb.stats.games::%{_uuid}%}
+
+
+            if {sb.plot::%{_plotNumber}%} is set:
+
+                set {sb.plotOf::%{_uuid}%} to {sb.plot::%{_plotNumber}%}
+
+
+                clearSBPlot({sb.plot::%{_plotNumber}%})
+
+
+                # =================================================
+                # MIDDLE OF FRONT EDGE
+                # =================================================
+
+                set {_spawn} to {sb.plot::%{_plotNumber}%}
+
+                add 2.5 to x-coordinate of {_spawn}
+                add 0.5 to z-coordinate of {_spawn}
+                add 0.1 to y-coordinate of {_spawn}
+
+
+                teleport {_p} to {_spawn}
+
+
+                set {_p}'s gamemode to survival
+
+
+                # Flight
+                allow flight to {_p}
+                make {_p} fly
+
+
+                # Player skin + stats display
+                spawnSBPlayerDisplay({_p})
+
+                # Target is given after the countdown at GO.
+
+
+                # Start sound
+                play sound "block.note_block.pling" to {_p}
+
+
+            else:
+
+                send "&cNo Speed Builders plot %{_plotNumber}% is set." to {_p}
+
+
+        add 1 to {_index}
+        add 1 to {_plotNumber}
+
+
+    broadcast ""
+    broadcast "&6&l━━━━━━━━ SPEED BUILDERS ━━━━━━━━"
+    broadcast "&7Starting in &e5 seconds&7..."
+    broadcast ""
+
+
+# =========================================================
+# TIMER
+# =========================================================
+
+every 1 second:
+
+
+    # =====================================================
+    # START COUNTDOWN
+    # =====================================================
+
+    if {sb.startCountdown} is set:
+        set {_index} to 1
+        while {_index} <= size of {sb.players::*}:
+            set {_p} to {sb.players::%{_index}%}
+            if {_p} is online:
+                if {sb.startCountdown} > 0:
+                    send title "&6%{sb.startCountdown}%" with subtitle "&7Starting..." to {_p} for 0.5 seconds
+                    send action bar "&6Starting in &e%{sb.startCountdown}%..." to {_p}
+                    play sound "block.note_block.pling" to {_p}
+                else:
+                    send title "&a&lGO!" with subtitle "&7Build!" to {_p} for 1 second
+                    send action bar "&a&lGO!" to {_p}
+                    play sound "entity.player.levelup" to {_p}
+                    giveNewSBTarget({_p})
+                    set {sb.active} to true
+            add 1 to {_index}
+
+        subtract 1 from {sb.startCountdown}
+
+        if {sb.startCountdown} < 0:
+            delete {sb.startCountdown}
+
+        stop
+
+    # =====================================================
+    # ROUND COUNTDOWN
+    # =====================================================
+
+    if {sb.cooldown} > 0:
+
+        set {_index} to 1
+
+        while {_index} <= size of {sb.players::*}:
+
+            set {_p} to {sb.players::%{_index}%}
+
+            if {_p} is online:
+
+                send action bar "&6Next round in &e%{sb.cooldown}%s" to {_p}
+                play sound "block.note_block.pling" to {_p}
+
+            add 1 to {_index}
+
+
+        subtract 1 from {sb.cooldown}
+
+
+        if {sb.cooldown} <= 0:
+
+            if {sb.round} < 3:
+
+                add 1 to {sb.round}
+
+                set {sb.time} to 60
+
+
+                set {_index} to 1
+
+                while {_index} <= size of {sb.players::*}:
+
+                    set {_p} to {sb.players::%{_index}%}
+
+
+                    if {_p} is online:
+
+                        set {_uuid} to uuid of {_p}
+                        set {_plot} to {sb.plotOf::%{_uuid}%}
+
+
+                        # Reset this round's stats
+                        set {sb.roundBuilds::%{_uuid}%} to 0
+                        set {sb.roundTimeTotal::%{_uuid}%} to 0
+                        set {sb.lastBuildTime::%{_uuid}%} to 60
+
+                        # Keep the template pool across rounds.
+                        # It resets only after every saved build is used.
+
+                        # Clear the player's inventory between rounds.
+                        clear {_p}'s inventory
+
+
+                        if {_plot} is set:
+
+                            clearSBPlot({_plot})
+
+                            spawnSBPlayerDisplay({_p})
+
+                            giveNewSBTarget({_p})
+
+                            play sound "block.note_block.pling" to {_p}
+
+
+                    add 1 to {_index}
+
+
+                broadcast ""
+                broadcast "&6&l━━━━━━━━ SPEED BUILDERS ━━━━━━━━"
+                broadcast "&eRound &f%{sb.round}% &7of &f3"
+                broadcast "&eTime: &f1 minute"
+                broadcast "&a&lGO!"
+                broadcast ""
+
+
+                set {sb.active} to true
+
+        stop
+
+
+    # =====================================================
+    # NORMAL GAME
+    # =====================================================
+
+    if {sb.active} is true:
+
+        subtract 1 from {sb.time}
+
+
+        # HUD
+        set {_index} to 1
+
+        while {_index} <= size of {sb.players::*}:
+
+            set {_p} to {sb.players::%{_index}%}
+
+
+            if {_p} is online:
+
+                set {_uuid} to uuid of {_p}
+
+
+                if {sb.roundBuilds::%{_uuid}%} > 0:
+
+                    set {_average} to {sb.roundTimeTotal::%{_uuid}%} / {sb.roundBuilds::%{_uuid}%}
+
+                else:
+
+                    set {_average} to 0
+
+
+                send action bar "&6Round &e%{sb.round}%/3 &8┃ &aBuilds &e%{sb.roundBuilds::%{_uuid}%}% &8┃ &6Avg &e%{_average}%s &8┃ &6Time &e%{sb.time}%s" to {_p}
+
+
+            add 1 to {_index}
+
+
+        # =================================================
+        # ROUND END
+        # =================================================
+
+        if {sb.time} <= 0:
+
+            set {sb.time} to 0
+            set {sb.active} to false
+
+
+            broadcast ""
+            broadcast "&6&l━━━━━━━━ ROUND %{sb.round}% COMPLETE ━━━━━━━━"
+            broadcast ""
+
+
+            play sound "block.bell.use" to all players
+
+
+            if {sb.round} < 3:
+
+                # Clear inventories immediately when the next-round message appears.
+                set {_index} to 1
+                while {_index} <= size of {sb.players::*}:
+                    set {_p} to {sb.players::%{_index}%}
+                    if {_p} is online:
+                        clear {_p}'s inventory
+                    add 1 to {_index}
+
+                # Five second countdown
+                set {sb.cooldown} to 5
+
+                broadcast "&eNext round begins in &65 &eseconds!"
+
+
+            else:
+
+                finishSBGame()
+
+
+# =========================================================
+# BUILD CHECK
+# =========================================================
+
+every 5 ticks:
+
+    if {sb.active} is true:
+
+        set {_index} to 1
+
+
+        while {_index} <= size of {sb.players::*}:
+
+            set {_p} to {sb.players::%{_index}%}
+
+            if {_p} is online:
+                checkSBBuild({_p})
+
+            add 1 to {_index}
+
+
+# =========================================================
+# LEFT CLICK = DELETE BLOCK
+# =========================================================
+#
+# Works even while holding another block.
+# Player gets the block back.
+# =========================================================
+
+on leftclick:
+
+    if {sb.active} is not true:
+        stop
+
+
+    if clicked block is not set:
+        stop
+
+
+    set {_uuid} to uuid of player
+
+
+    # =====================================================
+    # PROTECT TARGET
+    # =====================================================
+
+    set {_target} to {sb.targetOf::%{_uuid}%}
+
+
+    if {_target} is set:
+
+        set {_targetLoc} to location of clicked block
+
+
+        if world of {_targetLoc} is world of {_target}:
+
+            if x-coordinate of {_targetLoc} >= x-coordinate of {_target}:
+
+                if x-coordinate of {_targetLoc} <= x-coordinate of {_target} + 4:
+
+                    if y-coordinate of {_targetLoc} >= y-coordinate of {_target}:
+
+                        if y-coordinate of {_targetLoc} <= y-coordinate of {_target} + 4:
+
+                            if z-coordinate of {_targetLoc} = z-coordinate of {_target}:
+
+                                cancel event
+                                stop
+
+
+    # =====================================================
+    # GET PLOT
+    # =====================================================
+
+    set {_plot} to {sb.plotOf::%{_uuid}%}
+
+    if {_plot} is not set:
+        cancel event
+        stop
+
+
+    set {_loc} to location of clicked block
+
+
+    # =====================================================
+    # WORLD
+    # =====================================================
+
+    if world of {_loc} is not world of {_plot}:
+        cancel event
+        stop
+
+
+    # =====================================================
+    # X BOUNDARY
+    # =====================================================
+
+    if x-coordinate of {_loc} < x-coordinate of {_plot}:
+        cancel event
+        stop
+
+    if x-coordinate of {_loc} > x-coordinate of {_plot} + 4:
+        cancel event
+        stop
+
+
+    # =====================================================
+    # Z BOUNDARY
+    # =====================================================
+
+    if z-coordinate of {_loc} < z-coordinate of {_plot}:
+        cancel event
+        stop
+
+    if z-coordinate of {_loc} > z-coordinate of {_plot} + 4:
+        cancel event
+        stop
+
+
+    # =====================================================
+    # FLOOR
+    # =====================================================
+
+    if y-coordinate of {_loc} < y-coordinate of {_plot}:
+        cancel event
+        stop
+
+
+    if clicked block is air:
+        cancel event
+        stop
+
+
+    # =====================================================
+    # DELETE + RETURN BLOCK
+    # =====================================================
+
+    set {_type} to type of clicked block
+
+    set clicked block to air
+
+    give 1 of {_type} to player
+
+    cancel event
+
+    play sound "block.stone.break" to player
+
+
+# =========================================================
+# PLACE BLOCKS
+# =========================================================
+
+on place:
+
+    if {sb.active} is true:
+
+        set {_uuid} to uuid of player
+
+        set {_plot} to {sb.plotOf::%{_uuid}%}
+
+
+        if {_plot} is not set:
+            cancel event
+            stop
+
+
+        set {_loc} to location of event-block
+
+
+        # World
+        if world of {_loc} is not world of {_plot}:
+            cancel event
+            stop
+
+
+        # X
+        if x-coordinate of {_loc} < x-coordinate of {_plot}:
+            cancel event
+            stop
+
+        if x-coordinate of {_loc} > x-coordinate of {_plot} + 4:
+            cancel event
+            stop
+
+
+        # Z
+        if z-coordinate of {_loc} < z-coordinate of {_plot}:
+            cancel event
+            stop
+
+        if z-coordinate of {_loc} > z-coordinate of {_plot} + 4:
+            cancel event
+            stop
+
+
+        # Build upward
+        if y-coordinate of {_loc} < y-coordinate of {_plot}:
+            cancel event
+            stop
+
+
+        play sound "block.stone.place" to player
+
+
+# =========================================================
+# SAFETY: TARGET CANNOT BREAK
+# =========================================================
+
+on break:
+
+    if {sb.active} is true:
+
+        set {_uuid} to uuid of player
+        set {_target} to {sb.targetOf::%{_uuid}%}
+
+
+        if {_target} is set:
+
+            set {_loc} to location of event-block
+
+
+            if world of {_loc} is world of {_target}:
+
+                if x-coordinate of {_loc} >= x-coordinate of {_target}:
+
+                    if x-coordinate of {_loc} <= x-coordinate of {_target} + 4:
+
+                        if y-coordinate of {_loc} >= y-coordinate of {_target}:
+
+                            if y-coordinate of {_loc} <= y-coordinate of {_target} + 4:
+
+                                if z-coordinate of {_loc} = z-coordinate of {_target}:
+
+                                    cancel event
+
+
+# =========================================================
+# FINISH + TOP 5
+# =========================================================
+
+function finishSBGame():
+
+    set {sb.active} to false
+    set {sb.ended} to true
+
+
+    # =====================================================
+    # TOP 5
+    # =====================================================
+
+    delete {sb.rankUsed::*}
+
+
+    set {_rank} to 1
+
+
+    while {_rank} <= 5:
+
+
+        set {_bestPlayer} to none
+        set {_bestScore} to -1
+
+        set {_index} to 1
+
+
+        while {_index} <= size of {sb.players::*}:
+
+            set {_p} to {sb.players::%{_index}%}
+
+
+            if {_p} is online:
+
+                set {_uuid} to uuid of {_p}
+
+
+                if {sb.rankUsed::%{_uuid}%} is not true:
+
+                    if {sb.score::%{_uuid}%} is not set:
+                        set {sb.score::%{_uuid}%} to 0
+
+
+                    if {sb.score::%{_uuid}%} > {_bestScore}:
+
+                        set {_bestScore} to {sb.score::%{_uuid}%}
+                        set {_bestPlayer} to {_p}
+
+
+            add 1 to {_index}
+
+
+        if {_bestPlayer} is none:
+
+            set {_rank} to 6
+
+
+        else:
+
+            set {_bestUUID} to uuid of {_bestPlayer}
+
+            set {sb.rankUsed::%{_bestUUID}%} to true
+
+
+            if {_rank} is 1:
+
+                broadcast "&6&l★ 1st &e%name of {_bestPlayer}% &7— &f%{_bestScore}% builds"
+
+            else if {_rank} is 2:
+
+                broadcast "&e&l★ 2nd &f%name of {_bestPlayer}% &7— &f%{_bestScore}% builds"
+
+            else if {_rank} is 3:
+
+                broadcast "&6&l★ 3rd &f%name of {_bestPlayer}% &7— &f%{_bestScore}% builds"
+
+            else:
+
+                broadcast "&7%{_rank}%. &f%name of {_bestPlayer}% &7— &f%{_bestScore}% builds"
+
+
+        add 1 to {_rank}
+
+
+    broadcast ""
+
+
+    # =====================================================
+    # ALL-TIME WIN
+    # =====================================================
+
+    set {_winner} to none
+    set {_bestScore} to -1
+    set {_tie} to false
+
+    set {_winIndex} to 1
+    while {_winIndex} <= size of {sb.players::*}:
+        set {_winPlayer} to {sb.players::%{_winIndex}%}
+        set {_winUuid} to uuid of {_winPlayer}
+        set {_winScore} to {sb.score::%{_winUuid}%}
+
+        if {_winScore} is not set:
+            set {_winScore} to 0
+
+        if {_winScore} > {_bestScore}:
+            set {_bestScore} to {_winScore}
+            set {_winner} to {_winPlayer}
+            set {_tie} to false
+        else if {_winScore} is {_bestScore}:
+            set {_tie} to true
+
+        add 1 to {_winIndex}
+
+    if {_tie} is false:
+        if {_winner} is not none:
+            set {_winnerUuid} to uuid of {_winner}
+            add 1 to {sb.stats.wins::%{_winnerUuid}%}
+
+    # Refresh the display with the final all-time stats.
+    set {_displayIndex} to 1
+    while {_displayIndex} <= size of {sb.players::*}:
+        set {_displayPlayer} to {sb.players::%{_displayIndex}%}
+        if {_displayPlayer} is online:
+            spawnSBPlayerDisplay({_displayPlayer})
+        add 1 to {_displayIndex}
+
+    # =====================================================
+    # FINAL RESULTS FOR EACH PLAYER
+    # =====================================================
+
+    set {_index} to 1
+
+
+    while {_index} <= size of {sb.players::*}:
+
+        set {_p} to {sb.players::%{_index}%}
+
+
+        if {_p} is online:
+
+            set {_uuid} to uuid of {_p}
+
+
+            if {sb.score::%{_uuid}%} is not set:
+                set {sb.score::%{_uuid}%} to 0
+
+            if {sb.round1::%{_uuid}%} is not set:
+                set {sb.round1::%{_uuid}%} to 0
+
+            if {sb.round2::%{_uuid}%} is not set:
+                set {sb.round2::%{_uuid}%} to 0
+
+            if {sb.round3::%{_uuid}%} is not set:
+                set {sb.round3::%{_uuid}%} to 0
+
+
+            send "" to {_p}
+            send "&6&l━━━━━━━━ YOUR RESULTS ━━━━━━━━" to {_p}
+            send "&eRound 1: &f%{sb.round1::%{_uuid}%}% builds" to {_p}
+            send "&eRound 2: &f%{sb.round2::%{_uuid}%}% builds" to {_p}
+            send "&eRound 3: &f%{sb.round3::%{_uuid}%}% builds" to {_p}
+            send "&6&lTotal: &f%{sb.score::%{_uuid}%}% builds" to {_p}
+            send "" to {_p}
+
+
+            disallow flight to {_p}
+            force {_p} to stop flying
+
+
+            set {player.inGame::%{_uuid}%} to false
+
+
+            set {_p}'s gamemode to adventure
+
+            clear {_p}'s inventory
+
+            refreshNectarHotbar({_p})
+
+
+            play sound "entity.player.levelup" to {_p}
+
+
+        add 1 to {_index}
+
+
+    broadcast ""
+    broadcast "&6&l━━━━━━━━ SPEED BUILDERS COMPLETE ━━━━━━━━"
+    broadcast ""
+
+
+    set {_hostId} to {sb.hostId}
+
+
+    if {_hostId} is set:
+        endHostedGame({_hostId})
+
+
+    # =====================================================
+    # CLEAN GAME DATA
+    # =====================================================
+
+    delete {sb.players::*}
+    delete {sb.plotOf::*}
+    delete {sb.score::*}
+
+    delete {sb.round1::*}
+    delete {sb.round2::*}
+    delete {sb.round3::*}
+
+    delete {sb.roundBuilds::*}
+    delete {sb.roundTimeTotal::*}
+    delete {sb.lastBuildTime::*}
+
+    delete {sb.currentTemplate::*}
+    delete {sb.targetOf::*}
+    delete {sb.completed::*}
+    delete {sb.usedTemplates::*}
+    delete {sb.rankUsed::*}
+
+    delete {sb.hostId}
+    delete {sb.round}
+    delete {sb.time}
+    delete {sb.cooldown}
+    delete {sb.startCountdown}
+    delete {sb.active}
+    delete {sb.ended}
+
+
+
+command /sbsetdisplay:
+    permission: op
+    trigger:
+        set {sb.display.location} to location of player
+        send "&6&lNectar &8» &aSpeed Builders display location saved!"
+        send "&7Location: &f%location of player%"

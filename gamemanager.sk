@@ -1,0 +1,164 @@
+options:
+    prefix: &6&lNectar &8»
+
+function startHostedGame(p: player):
+    set {_hostId} to uuid of {_p}
+
+    if {host.owner::%{_hostId}%} is not set:
+        send "{@prefix} &cYou are not hosting a game." to {_p}
+        stop
+
+    if {host.started::%{_hostId}%} is true:
+        send "{@prefix} &cYour game has already started." to {_p}
+        stop
+
+    set {_game} to {host.game::%{_hostId}%}
+    if {_game} is not set:
+        send "{@prefix} &cNo game has been selected." to {_p}
+        stop
+
+    if size of {host.players::%{_hostId}%::*} < 1:
+        send "{@prefix} &cYou need at least 1 player to start." to {_p}
+        stop
+
+    set {_gameLower} to lowercase {_game}
+    if {_gameLower} is "spleef":
+        set {_game} to "Spleef"
+    else if {_gameLower} is "speed builders":
+        set {_game} to "Speed Builders"
+    else if {_gameLower} is "blitz hunt":
+        set {_game} to "Blitz Hunt"
+    else:
+        send "{@prefix} &cThat game is not configured: &f%{_game}%" to {_p}
+        stop
+
+    if {_game} is "Blitz Hunt":
+        startBlitzHunt({_hostId})
+        stop
+
+    if {_game} is "Spleef":
+        set {host.started::%{_hostId}%} to true
+        set {spleef.hostId} to {_hostId}
+        set {spleef.host} to {_p}
+        set {spleef.players::*} to {host.players::%{_hostId}%::*}
+        set {spleef.round} to 1
+        set {spleef.active} to false
+        set {spleef.changinground} to false
+        set {spleef.ended} to false
+        delete {spleef.eliminated::*}
+        delete {spleef.mined::*}
+        delete {spleef.snowballcount::*}
+        delete {spleef.nextball::*}
+        delete {spleef.snowballShooter::*}
+        delete {spleef.lastHit::*}
+        delete {spleef.lastBreaker::*}
+        delete {spleef.kills::*}
+        delete {spleef.points::*}
+        if {spleef.mode::%{_hostId}%} is not "tnt":
+            set {spleef.mode::%{_hostId}%} to "normal"
+        loop {spleef.players::*}:
+            set {_target} to loop-value
+            if {_target} is online:
+                set {player.inGame::%uuid of {_target}%} to true
+                clear {_target}'s inventory
+                if {spleef.spawn} is set:
+                    teleport {_target} to {spleef.spawn}
+                set {_target}'s gamemode to adventure
+                if {spleef.mode::%{_hostId}%} is "tnt":
+                    give bow named "&6&lTNT Spleef" to {_target}
+                    give crossbow named "&b&lLaunch Crossbow" to {_target}
+                else:
+                    give stone shovel to {_target}
+                set {spleef.eliminated::%uuid of {_target}%} to false
+                set {spleef.mined::%uuid of {_target}%} to 0
+                set {spleef.snowballcount::%uuid of {_target}%} to 0
+                set {spleef.nextball::%uuid of {_target}%} to 25
+        broadcast "&6&lSPLEEF"
+        broadcast "&7Round &e1 &7of &e3"
+        wait 5 seconds
+        if {spleef.ended} is true:
+            stop
+        loop {spleef.players::*}:
+            if loop-value is online:
+                set loop-value's gamemode to survival
+        set {spleef.active} to true
+        broadcast "&a&lGO!"
+        stop
+
+    if {_game} is "Speed Builders":
+        set {host.started::%{_hostId}%} to true
+        startSpeedBuilders({_hostId})
+        stop
+
+function endHostedGame(hostId: text):
+    if {host.owner::%{_hostId}%} is not set:
+        stop
+
+    set {spleef.active} to false
+    set {spleef.changinground} to false
+    set {spleef.ended} to true
+    set {sb.active} to false
+    set {sb.ended} to true
+
+    if {host.game::%{_hostId}%} is "Speed Builders":
+        loop {host.players::%{_hostId}%::*}:
+            if loop-value is online:
+                removeSBPlayerDisplay(loop-value)
+
+    loop {host.players::%{_hostId}%::*}:
+        set {_target} to loop-value
+        if {_target} is online:
+            set {player.inGame::%uuid of {_target}%} to false
+            set {_target}'s gamemode to adventure
+            clear {_target}'s inventory
+            refreshNectarHotbar({_target})
+
+    delete {host.owner::%{_hostId}%}
+    delete {host.owner.uuid::%{_hostId}%}
+    delete {host.game::%{_hostId}%}
+    delete {host.maxplayers::%{_hostId}%}
+    delete {host.teamsize::%{_hostId}%}
+    delete {host.started::%{_hostId}%}
+    delete {host.players::%{_hostId}%::*}
+    remove {_hostId} from {hosts::*}
+
+    delete {spleef.players::*}
+    delete {spleef.eliminated::*}
+    delete {spleef.mined::*}
+    delete {spleef.snowballcount::*}
+    delete {spleef.nextball::*}
+    delete {spleef.snowballShooter::*}
+    delete {spleef.lastHit::*}
+    delete {spleef.lastBreaker::*}
+    delete {spleef.kills::*}
+    delete {spleef.points::*}
+    delete {spleef.host}
+    delete {spleef.hostId}
+    delete {spleef.round}
+    delete {spleef.mode::%{_hostId}%}
+
+    delete {sb.players::*}
+    delete {sb.plotOf::*}
+    delete {sb.score::*}
+    delete {sb.currentTemplate::*}
+    delete {sb.lastComplete::*}
+    delete {sb.hostId}
+    delete {sb.round}
+    delete {sb.time}
+
+    delete {blitz.players::*}
+    delete {blitz.role::*}
+    delete {blitz.eliminated::*}
+    delete {blitz.sonar::*}
+    delete {blitz.hunter}
+    delete {blitz.hostId}
+    delete {blitz.round}
+    delete {blitz.active}
+    delete {blitz.prep}
+    delete {blitz.ended}
+    delete {blitz.usedRooms::*}
+    delete {blitz.roomSchem::*}
+
+command /startgame:
+    trigger:
+        startHostedGame(player)

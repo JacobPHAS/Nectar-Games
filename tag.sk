@@ -1,0 +1,102 @@
+
+options:
+    round-time: 120 seconds
+
+command /tagstart:
+    permission: tag.admin
+    trigger:
+        if {tag.active} is true:
+            send "&cA Tag game is already running!"
+            stop
+        if number of all players is less than 2:
+            send "&cYou need at least 2 players!"
+            stop
+
+        set {tag.active} to true
+        delete {tag.role::*}
+
+        loop all players:
+            remove glowing from loop-player
+            execute console command "team leave %name of loop-player%"
+            set gamemode of loop-player to survival
+
+        set {_players::*} to all players
+        set {_huntercount} to floor(size of {_players::*} / 4)
+        if {_huntercount} < 1:
+            set {_huntercount} to 1
+
+        loop {_huntercount} times:
+            set {_hunter} to random element out of {_players::*}
+            remove {_hunter} from {_players::*}
+            set {tag.role::%uuid of {_hunter}%} to "hunter"
+            execute console command "team join tag_hunters %name of {_hunter}%"
+            execute console command "effect give %name of {_hunter}% minecraft:glowing 125 true"
+            send title "&cHUNTER" with subtitle "&7Tag the runners!" to {_hunter}
+
+        loop {_players::*}:
+            set {tag.role::%uuid of loop-value%} to "runner"
+            execute console command "team join tag_runners %name of loop-value%"
+            execute console command "effect give %name of loop-value% minecraft:glowing 125 true"
+            send title "&9RUNNER" with subtitle "&7Don't get tagged!" to loop-value
+
+        broadcast "&6&lTAG &8» &eThe game has started!"
+        broadcast "&cHunters &7chase the &9runners&7!"
+        set {tag.time} to 120
+
+        loop 120 times:
+            if {tag.active} is not true:
+                stop
+            wait 1 second
+            remove 1 from {tag.time}
+
+            if {tag.time} is 0:
+                stop
+
+            if {tag.time} is 60 or {tag.time} is 30 or {tag.time} is 10 or {tag.time} is 5 or {tag.time} is 4 or {tag.time} is 3 or {tag.time} is 2 or {tag.time} is 1:
+                broadcast "&6&lTAG &8» &e%{tag.time}% seconds remaining!"
+
+        if {tag.active} is true:
+            set {tag.active} to false
+            broadcast "&9&lRUNNERS WIN! &7Time ran out!"
+            loop all players:
+                execute console command "effect clear %name of loop-player% minecraft:glowing"
+                execute console command "team leave %name of loop-player%"
+            delete {tag.role::*}
+
+command /tagstop:
+    permission: tag.admin
+    trigger:
+        set {tag.active} to false
+        broadcast "&cThe Tag game has been stopped."
+        loop all players:
+            execute console command "effect clear %name of loop-player% minecraft:glowing"
+            execute console command "team leave %name of loop-player%"
+        delete {tag.role::*}
+
+on damage of player:
+    if {tag.active} is not true:
+        stop
+    if attacker is a player:
+        if {tag.role::%uuid of attacker%} is "hunter":
+            if {tag.role::%uuid of victim%} is "runner":
+                cancel event
+                set {tag.role::%uuid of victim%} to "tagged"
+
+                broadcast "&6&lTAG &8» &c%name of victim% &7was tagged by &c%name of attacker%&7!"
+                play sound "entity.firework_rocket.blast" at victim with volume 1 and pitch 1
+
+                kill victim
+                execute console command "team leave %name of victim%"
+
+                set {_runners} to 0
+                loop all players:
+                    if {tag.role::%uuid of loop-player%} is "runner":
+                        add 1 to {_runners}
+
+                if {_runners} is 0:
+                    set {tag.active} to false
+                    broadcast "&c&lHUNTERS WIN! &7All runners have been tagged!"
+                    loop all players:
+                        execute console command "effect clear %name of loop-player% minecraft:glowing"
+                        execute console command "team leave %name of loop-player%"
+                    delete {tag.role::*}

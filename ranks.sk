@@ -1,0 +1,122 @@
+options:
+    rank-owner: _d1gital
+
+command /rank <offline player> <text>:
+    trigger:
+        if name of player is not "{@rank-owner}":
+            send "&6&lNectar &8» &cYou do not have permission to use this command."
+            stop
+
+        set {_target} to arg-1
+        set {_rank} to lowercase arg-2
+
+        # Check valid rank
+        if {_rank} is not "player":
+            if {_rank} is not "builder":
+                if {_rank} is not "admin":
+                    if {_rank} is not "owner":
+                        if {_rank} is not "nectar":
+                            send "&6&lNectar &8» &cInvalid rank."
+                            send "&7Valid ranks: &fPLAYER, BUILDER, ADMIN, OWNER, NECTAR"
+                            stop
+
+        # Change LuckPerms group
+        execute console command "lp user %name of {_target}% parent set %{_rank}%"
+
+        # Save rank in Skript
+        if {_rank} is "player":
+            set {rank::%uuid of {_target}%} to "PLAYER"
+
+        if {_rank} is "builder":
+            set {rank::%uuid of {_target}%} to "BUILDER"
+
+        if {_rank} is "admin":
+            set {rank::%uuid of {_target}%} to "ADMIN"
+
+        if {_rank} is "owner":
+            set {rank::%uuid of {_target}%} to "OWNER"
+
+        if {_rank} is "nectar":
+            set {rank::%uuid of {_target}%} to "NECTAR"
+            set {rank.nectar::%uuid of {_target}%} to true
+        else:
+            delete {rank.nectar::%uuid of {_target}%}
+
+        send "&6&lNectar &8» &aRank changed to &e%{_rank}%&a."
+
+        # Tell target if online
+        if {_target} is online:
+            send "&6&lNectar &8» &aYour rank has been changed to &e%{_rank}%&a." to {_target}
+
+
+command /myrank:
+    trigger:
+        set {_rank} to {rank::%uuid of player%}
+
+        if {_rank} is not set:
+            set {_rank} to "PLAYER"
+
+        send "&6&lNectar &8» &7Your rank: &e%{_rank}%"
+
+
+function getRank(p: player) :: text:
+    set {_rank} to {rank::%uuid of {_p}%}
+
+    if {_rank} is not set:
+        set {_rank} to "PLAYER"
+
+    return {_rank}
+
+
+function getRankGlyph(p: player) :: text:
+    set {_rank} to getRank({_p})
+
+    if {_rank} is "BUILDER":
+        return ""
+
+    if {_rank} is "ADMIN":
+        return ""
+
+    if {_rank} is "OWNER":
+        return ""
+
+    if {_rank} is "NECTAR":
+        return ""
+
+    return ""
+
+
+on join:
+    if {rank::%uuid of player%} is not set:
+        set {rank::%uuid of player%} to "PLAYER"
+
+
+command /rankdebug:
+    trigger:
+        if name of player is not "{@rank-owner}":
+            send "&cNo permission."
+            stop
+
+        send "&6&lNectar &8» &7Skript rank: &f%getRank(player)%"
+
+
+on chat:
+    set {_rank} to {rank::%uuid of player%}
+
+    if {_rank} is "NECTAR":
+        set chat format to formatted "<font:nectar:ranks></font> <white>%player% <gray>» <white>%message%"
+        stop
+
+    if {_rank} is "OWNER":
+        set chat format to formatted "<font:nectar:ranks></font> <white>%player% <gray>» <white>%message%"
+        stop
+
+    if {_rank} is "ADMIN":
+        set chat format to formatted "<font:nectar:ranks></font> <white>%player% <gray>» <white>%message%"
+        stop
+
+    if {_rank} is "BUILDER":
+        set chat format to formatted "<font:nectar:ranks></font> <white>%player% <gray>» <white>%message%"
+        stop
+
+    set chat format to formatted "<white>%player% <gray>» <white>%message%"

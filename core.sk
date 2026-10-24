@@ -1,0 +1,101 @@
+options:
+    prefix: &6&lNectar &8»
+
+function giveHubItems(p: player):
+    set slot 0 of {_p}'s inventory to clock named "&6&lHost a Game" with lore "&7Right-click to create a minigame host.", "", "&8Nectar"
+    set slot 4 of {_p}'s inventory to nether star named "&e&lActive Hosts" with lore "&7Right-click to browse active games.", "", "&8Nectar"
+    set slot 8 of {_p}'s inventory to emerald named "&a&lPractice" with lore "&7Right-click to open practice.", "", "&8Nectar"
+
+function giveHostItems(p: player):
+    set slot 0 of {_p}'s inventory to chest named "&6&lHost Manager" with lore "&7Manage your hosted game.", "", "&8Right-click to open."
+    set slot 4 of {_p}'s inventory to nether star named "&e&lActive Hosts" with lore "&7Right-click to browse active games.", "", "&8Nectar"
+    set slot 8 of {_p}'s inventory to emerald named "&a&lPractice" with lore "&7Right-click to open practice.", "", "&8Nectar"
+
+function refreshNectarHotbar(p: player):
+    if {player.inGame::%uuid of {_p}%} is true:
+        stop
+    if isHost({_p}) is true:
+        giveHostItems({_p})
+    else:
+        giveHubItems({_p})
+
+on join:
+    wait 2 ticks
+    set player's gamemode to adventure
+    delete {player.inGame::%uuid of player%}
+    refreshNectarHotbar(player)
+    send "" to player
+    send "{@prefix} &fWelcome to &6&lNectar&f." to player
+    send "{@prefix} &7Use the items in your hotbar to get started." to player
+    send "" to player
+
+on respawn:
+    wait 2 ticks
+    if {player.inGame::%uuid of player%} is not true:
+        set player's gamemode to adventure
+        refreshNectarHotbar(player)
+
+every 2 seconds:
+    loop all players:
+        if {player.inGame::%uuid of loop-player%} is not true:
+            refreshNectarHotbar(loop-player)
+
+command /hub:
+    trigger:
+        if {player.inGame::%uuid of player%} is true:
+            send "{@prefix} &cYou cannot return to the hub while you're in a game."
+            stop
+        if isHost(player) is true:
+            send "{@prefix} &cYou are currently hosting a game."
+            send "{@prefix} &7Cancel your host first."
+            stop
+        set player's gamemode to adventure
+        refreshNectarHotbar(player)
+        send "{@prefix} &7Returned to the hub."
+
+command /givehub:
+    permission: op
+    trigger:
+        refreshNectarHotbar(player)
+        send "{@prefix} &aYour Nectar hotbar has been restored."
+
+on drop:
+    if {player.inGame::%uuid of player%} is true:
+        stop
+    if name of event-item is "&6&lHost a Game":
+        cancel event
+    else if name of event-item is "&6&lHost Manager":
+        cancel event
+    else if name of event-item is "&e&lActive Hosts":
+        cancel event
+    else if name of event-item is "&a&lPractice":
+        cancel event
+
+on inventory click:
+    if {player.inGame::%uuid of player%} is true:
+        stop
+    if name of event-item is "&6&lHost a Game":
+        cancel event
+    else if name of event-item is "&6&lHost Manager":
+        cancel event
+    else if name of event-item is "&e&lActive Hosts":
+        cancel event
+    else if name of event-item is "&a&lPractice":
+        cancel event
+
+on right click:
+    if {player.inGame::%uuid of player%} is true:
+        stop
+    if clicked block is set:
+        cancel event
+        stop
+    if clicked entity is set:
+        cancel event
+        stop
+
+on craft:
+    if {player.inGame::%uuid of player%} is not true:
+        cancel event
+        stop
+    if {sb.plotOf::%uuid of player%} is set:
+        cancel event

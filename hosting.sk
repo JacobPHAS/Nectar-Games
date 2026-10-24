@@ -1,0 +1,242 @@
+# =========================================================
+# NECTAR HOSTING
+# =========================================================
+
+function hasHostPermission(p: player) :: boolean:
+    set {_rank} to {rank::%uuid of {_p}%}
+
+    if {_rank} is "NECTAR":
+        return true
+
+    if {_rank} is "OWNER":
+        return true
+
+    return false
+
+
+function getPlayerHost(p: player) :: text:
+    set {_uuid} to uuid of {_p}
+    set {_index} to 1
+
+    while {_index} <= size of {hosts::*}:
+        set {_hostId} to {hosts::%{_index}%}
+
+        if {host.owner.uuid::%{_hostId}%} is {_uuid}:
+            return {_hostId}
+
+        add 1 to {_index}
+
+    return ""
+
+
+function isHost(p: player) :: boolean:
+    if getPlayerHost({_p}) is not "":
+        return true
+
+    return false
+
+
+# =========================================================
+# CREATE HOST
+# =========================================================
+
+function createHost(p: player, game: text):
+    if hasHostPermission({_p}) is not true:
+        send "&6&lNectar &8» &cOnly &eOWNER &cand &eNECTAR &ccan host games." to {_p}
+        stop
+
+    set {_uuid} to uuid of {_p}
+
+    if getPlayerHost({_p}) is not "":
+        send "&6&lNectar &8» &cYou already have a host." to {_p}
+        stop
+
+    set {_hostId} to {_uuid}
+
+    add {_hostId} to {hosts::*}
+
+    set {host.owner::%{_hostId}%} to {_p}
+    set {host.owner.uuid::%{_hostId}%} to {_uuid}
+    set {host.game::%{_hostId}%} to {_game}
+    set {host.maxplayers::%{_hostId}%} to 10
+    set {host.teamsize::%{_hostId}%} to 2
+    set {host.started::%{_hostId}%} to false
+
+    delete {host.players::%{_hostId}%::*}
+
+    add {_p} to {host.players::%{_hostId}%::*}
+
+    send "" to {_p}
+    broadcast "&6&lNectar &8» &e%name of {_p}% &ahas created a &e%{_game}% &ahost!"
+    send "&6&lNectar &8» &aHost created!" to {_p}
+    send "&7Game: &e%{_game}%" to {_p}
+    send "&7Players: &e1&7/&e10" to {_p}
+    send "" to {_p}
+
+
+# =========================================================
+# JOIN HOST
+# =========================================================
+
+function joinHost(p: player, hostId: text):
+    if {_hostId} is not in {hosts::*}:
+        send "&6&lNectar &8» &cThat host no longer exists." to {_p}
+        stop
+
+    if {host.owner::%{_hostId}%} is not set:
+        send "&6&lNectar &8» &cThat host is invalid." to {_p}
+        stop
+
+    if {host.started::%{_hostId}%} is true:
+        send "&6&lNectar &8» &cThat game has already started." to {_p}
+        stop
+
+    if {_p} is in {host.players::%{_hostId}%::*}:
+        send "&6&lNectar &8» &eYou're already in this queue." to {_p}
+        stop
+
+    set {_max} to {host.maxplayers::%{_hostId}%}
+
+    if {_max} is not set:
+        set {_max} to 10
+
+    if size of {host.players::%{_hostId}%::*} >= {_max}:
+        send "&6&lNectar &8» &cThat host is full." to {_p}
+        stop
+
+    add {_p} to {host.players::%{_hostId}%::*}
+
+    send "&6&lNectar &8» &aYou joined &e%{host.game::%{_hostId}%}%&a!" to {_p}
+
+    set {_owner} to {host.owner::%{_hostId}%}
+
+    if {_owner} is online:
+        send "&6&lNectar &8» &e%name of {_p}% &ajoined your queue. &7(%size of {host.players::%{_hostId}%::*}%/%{_max}%)" to {_owner}
+
+    close {_p}'s inventory
+
+
+# =========================================================
+# LEAVE HOST
+# =========================================================
+
+function leaveHost(p: player, hostId: text):
+    if {_hostId} is not in {hosts::*}:
+        stop
+
+    if {_p} is not in {host.players::%{_hostId}%::*}:
+        send "&6&lNectar &8» &cYou're not in this queue." to {_p}
+        stop
+
+    if uuid of {_p} is {host.owner.uuid::%{_hostId}%}:
+        send "&6&lNectar &8» &cThe host owner cannot leave their own host." to {_p}
+        stop
+
+    remove {_p} from {host.players::%{_hostId}%::*}
+
+    send "&6&lNectar &8» &aYou left the queue." to {_p}
+
+
+# =========================================================
+# SPEED BUILDERS DISPLAY CLEANUP
+# =========================================================
+
+function cleanupSBPlayerDisplay(p: player):
+    set {_uuid} to uuid of {_p}
+
+    execute console command "kill @e[tag=sb_player_display_%{_uuid}%]"
+    execute console command "kill @e[tag=sb_player_display_%{_uuid}%_games]"
+    execute console command "kill @e[tag=sb_player_display_%{_uuid}%_wins]"
+    execute console command "kill @e[tag=sb_player_display_%{_uuid}%_builds]"
+
+    delete {sb.display.spawned::%{_uuid}%}
+
+
+function cleanupSBHostDisplays(hostId: text):
+    loop {host.players::%{_hostId}%::*}:
+        cleanupSBPlayerDisplay(loop-value)
+
+
+# =========================================================
+# CANCEL HOST
+# =========================================================
+
+function cancelHost(p: player):
+    set {_hostId} to getPlayerHost({_p})
+
+    if {_hostId} is "":
+        send "&6&lNectar &8» &cYou don't currently have a host." to {_p}
+        stop
+
+    if {host.owner.uuid::%{_hostId}%} is not uuid of {_p}:
+        send "&6&lNectar &8» &cYou don't own this host." to {_p}
+        stop
+
+
+    # -----------------------------------------------------
+    # ACTIVE GAME
+    # -----------------------------------------------------
+
+    if {host.started::%{_hostId}%} is true:
+        send "&6&lNectar &8» &cEnding your active game..." to {_p}
+
+        cleanupSBHostDisplays({_hostId})
+
+        endHostedGame({_hostId})
+
+        stop
+
+
+    # -----------------------------------------------------
+    # WAITING HOST
+    # -----------------------------------------------------
+
+    loop {host.players::%{_hostId}%::*}:
+        if loop-value is online:
+            if uuid of loop-value is not uuid of {_p}:
+                send "&6&lNectar &8» &cThe host was cancelled by the owner." to loop-value
+
+    remove {_hostId} from {hosts::*}
+
+    delete {host.owner::%{_hostId}%}
+    delete {host.owner.uuid::%{_hostId}%}
+    delete {host.game::%{_hostId}%}
+    delete {host.maxplayers::%{_hostId}%}
+    delete {host.teamsize::%{_hostId}%}
+    delete {host.started::%{_hostId}%}
+    delete {host.players::%{_hostId}%::*}
+
+    send "&6&lNectar &8» &aYour host has been cancelled." to {_p}
+
+
+# =========================================================
+# COMMANDS
+# =========================================================
+
+command /cancelhost:
+    trigger:
+        cancelHost(player)
+
+
+command /endhost:
+    trigger:
+        cancelHost(player)
+
+
+# =========================================================
+# RESET HOSTS
+# =========================================================
+
+command /resethosts:
+    permission: op
+    trigger:
+        delete {hosts::*}
+        delete {host.owner::*}
+        delete {host.owner.uuid::*}
+        delete {host.game::*}
+        delete {host.maxplayers::*}
+        delete {host.teamsize::*}
+        delete {host.started::*}
+        delete {host.players::*}
+
+        send "&6&lNectar &8» &aAll hosts reset."

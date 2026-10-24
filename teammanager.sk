@@ -1,0 +1,205 @@
+options:
+    prefix: &6&lNectar &8»
+
+
+function assignHostTeams(hostId: text):
+    set {_teamSize} to {host.teamsize::%{_hostId}%}
+
+    delete {nw.team::*}
+    delete {nw.displayname::*}
+    delete {nw.nametag::*}
+
+    # Solo mode
+    if {_teamSize} is 1:
+        loop {host.players::%{_hostId}%::*}:
+            set {_player} to loop-value
+            if {_player} is online:
+                set {_uuid} to uuid of {_player}
+                set {nw.displayname::%{_uuid}%} to "<white>%{_player}%"
+                set {nw.nametag::%{_uuid}%} to ""
+        stop
+
+    set {_teamNumber} to 1
+    set {_teamCount} to 0
+
+    loop {host.players::%{_hostId}%::*}:
+        set {_player} to loop-value
+
+        if {_player} is online:
+
+            if {_teamNumber} is 1:
+                set {_team} to "red"
+            else if {_teamNumber} is 2:
+                set {_team} to "orange"
+            else if {_teamNumber} is 3:
+                set {_team} to "yellow"
+            else if {_teamNumber} is 4:
+                set {_team} to "green"
+            else if {_teamNumber} is 5:
+                set {_team} to "blue"
+            else if {_teamNumber} is 6:
+                set {_team} to "cyan"
+            else if {_teamNumber} is 7:
+                set {_team} to "pink"
+            else if {_teamNumber} is 8:
+                set {_team} to "purple"
+            else if {_teamNumber} is 9:
+                set {_team} to "black"
+            else if {_teamNumber} is 10:
+                set {_team} to "white"
+            else if {_teamNumber} is 11:
+                set {_team} to "gray"
+            else if {_teamNumber} is 12:
+                set {_team} to "brown"
+            else if {_teamNumber} is 13:
+                set {_team} to "lime"
+            else if {_teamNumber} is 14:
+                set {_team} to "magenta"
+            else if {_teamNumber} is 15:
+                set {_team} to "light blue"
+            else if {_teamNumber} is 16:
+                set {_team} to "dark red"
+            else if {_teamNumber} is 17:
+                set {_team} to "gold"
+            else if {_teamNumber} is 18:
+                set {_team} to "dark green"
+            else if {_teamNumber} is 19:
+                set {_team} to "dark aqua"
+            else if {_teamNumber} is 20:
+                set {_team} to "dark blue"
+            else if {_teamNumber} is 21:
+                set {_team} to "dark purple"
+            else if {_teamNumber} is 22:
+                set {_team} to "light gray"
+            else if {_teamNumber} is 23:
+                set {_team} to "dark gray"
+            else:
+                set {_team} to "rose"
+
+            set {nw.team::%{_player}%} to {_team}
+
+            set {_uuid} to uuid of {_player}
+
+            if {_team} is "red":
+                set {nw.displayname::%{_uuid}%} to "<red><bold>RED</bold> <white>%{_player}%"
+                set {nw.nametag::%{_uuid}%} to "<red><bold>RED</bold> <white>"
+
+            else if {_team} is "orange":
+                set {nw.displayname::%{_uuid}%} to "<gold><bold>ORANGE</bold> <white>%{_player}%"
+                set {nw.nametag::%{_uuid}%} to "<gold><bold>ORANGE</bold> <white>"
+
+            else if {_team} is "yellow":
+                set {nw.displayname::%{_uuid}%} to "<yellow><bold>YELLOW</bold> <white>%{_player}%"
+                set {nw.nametag::%{_uuid}%} to "<yellow><bold>YELLOW</bold> <white>"
+
+            else if {_team} is "green":
+                set {nw.displayname::%{_uuid}%} to "<green><bold>GREEN</bold> <white>%{_player}%"
+                set {nw.nametag::%{_uuid}%} to "<green><bold>GREEN</bold> <white>"
+
+            else if {_team} is "blue":
+                set {nw.displayname::%{_uuid}%} to "<blue><bold>BLUE</bold> <white>%{_player}%"
+                set {nw.nametag::%{_uuid}%} to "<blue><bold>BLUE</bold> <white>"
+
+            else if {_team} is "cyan":
+                set {nw.displayname::%{_uuid}%} to "<aqua><bold>CYAN</bold> <white>%{_player}%"
+                set {nw.nametag::%{_uuid}%} to "<aqua><bold>CYAN</bold> <white>"
+
+            else if {_team} is "pink":
+                set {nw.displayname::%{_uuid}%} to "<light_purple><bold>PINK</bold> <white>%{_player}%"
+                set {nw.nametag::%{_uuid}%} to "<light_purple><bold>PINK</bold> <white>"
+
+            else if {_team} is "purple":
+                set {nw.displayname::%{_uuid}%} to "<dark_purple><bold>PURPLE</bold> <white>%{_player}%"
+                set {nw.nametag::%{_uuid}%} to "<dark_purple><bold>PURPLE</bold> <white>"
+
+            else if {_team} is "black":
+                set {nw.displayname::%{_uuid}%} to "<black><bold>BLACK</bold> <white>%{_player}%"
+                set {nw.nametag::%{_uuid}%} to "<black><bold>BLACK</bold> <white>"
+
+            else if {_team} is "white":
+                set {nw.displayname::%{_uuid}%} to "<white><bold>WHITE</bold> <white>%{_player}%"
+                set {nw.nametag::%{_uuid}%} to "<white><bold>WHITE</bold> <white>"
+
+            else if {_team} is "gray":
+                set {nw.displayname::%{_uuid}%} to "<gray><bold>GRAY</bold> <white>%{_player}%"
+                set {nw.nametag::%{_uuid}%} to "<gray><bold>GRAY</bold> <white>"
+
+            else if {_team} is "brown":
+                set {nw.displayname::%{_uuid}%} to "<gold><bold>BROWN</bold> <white>%{_player}%"
+                set {nw.nametag::%{_uuid}%} to "<gold><bold>BROWN</bold> <white>"
+
+            else if {_team} is "lime":
+                set {nw.displayname::%{_uuid}%} to "<green><bold>LIME</bold> <white>%{_player}%"
+                set {nw.nametag::%{_uuid}%} to "<green><bold>LIME</bold> <white>"
+
+            else if {_team} is "magenta":
+                set {nw.displayname::%{_uuid}%} to "<light_purple><bold>MAGENTA</bold> <white>%{_player}%"
+                set {nw.nametag::%{_uuid}%} to "<light_purple><bold>MAGENTA</bold> <white>"
+
+            else if {_team} is "light blue":
+                set {nw.displayname::%{_uuid}%} to "<aqua><bold>LIGHT BLUE</bold> <white>%{_player}%"
+                set {nw.nametag::%{_uuid}%} to "<aqua><bold>LIGHT BLUE</bold> <white>"
+
+            else if {_team} is "dark red":
+                set {nw.displayname::%{_uuid}%} to "<dark_red><bold>DARK RED</bold> <white>%{_player}%"
+                set {nw.nametag::%{_uuid}%} to "<dark_red><bold>DARK RED</bold> <white>"
+
+            else if {_team} is "gold":
+                set {nw.displayname::%{_uuid}%} to "<gold><bold>GOLD</bold> <white>%{_player}%"
+                set {nw.nametag::%{_uuid}%} to "<gold><bold>GOLD</bold> <white>"
+
+            else if {_team} is "dark green":
+                set {nw.displayname::%{_uuid}%} to "<dark_green><bold>DARK GREEN</bold> <white>%{_player}%"
+                set {nw.nametag::%{_uuid}%} to "<dark_green><bold>DARK GREEN</bold> <white>"
+
+            else if {_team} is "dark aqua":
+                set {nw.displayname::%{_uuid}%} to "<dark_aqua><bold>DARK AQUA</bold> <white>%{_player}%"
+                set {nw.nametag::%{_uuid}%} to "<dark_aqua><bold>DARK AQUA</bold> <white>"
+
+            else if {_team} is "dark blue":
+                set {nw.displayname::%{_uuid}%} to "<dark_blue><bold>DARK BLUE</bold> <white>%{_player}%"
+                set {nw.nametag::%{_uuid}%} to "<dark_blue><bold>DARK BLUE</bold> <white>"
+
+            else if {_team} is "dark purple":
+                set {nw.displayname::%{_uuid}%} to "<dark_purple><bold>DARK PURPLE</bold> <white>%{_player}%"
+                set {nw.nametag::%{_uuid}%} to "<dark_purple><bold>DARK PURPLE</bold> <white>"
+
+            else if {_team} is "light gray":
+                set {nw.displayname::%{_uuid}%} to "<gray><bold>LIGHT GRAY</bold> <white>%{_player}%"
+                set {nw.nametag::%{_uuid}%} to "<gray><bold>LIGHT GRAY</bold> <white>"
+
+            else if {_team} is "dark gray":
+                set {nw.displayname::%{_uuid}%} to "<dark_gray><bold>DARK GRAY</bold> <white>%{_player}%"
+                set {nw.nametag::%{_uuid}%} to "<dark_gray><bold>DARK GRAY</bold> <white>"
+
+            else if {_team} is "rose":
+                set {nw.displayname::%{_uuid}%} to "<light_purple><bold>ROSE</bold> <white>%{_player}%"
+                set {nw.nametag::%{_uuid}%} to "<light_purple><bold>ROSE</bold> <white>"
+
+            add 1 to {_teamCount}
+
+            if {_teamCount} >= {_teamSize}:
+                set {_teamCount} to 0
+                add 1 to {_teamNumber}
+
+                if {_teamNumber} > 24:
+                    set {_teamNumber} to 24
+
+
+function clearHostTeams(hostId: text):
+    loop {host.players::%{_hostId}%::*}:
+        set {_player} to loop-value
+        set {_uuid} to uuid of {_player}
+
+        delete {nw.team::%{_player}%}
+        set {nw.displayname::%{_uuid}%} to "<white>%{_player}%"
+        set {nw.nametag::%{_uuid}%} to ""
+
+
+on join:
+    execute console command "team leave %player%"
+
+    set {_uuid} to uuid of player
+    set {nw.displayname::%{_uuid}%} to "<white>%player%"
+    set {nw.nametag::%{_uuid}%} to ""
+    delete {nw.team::%player%}

@@ -1,0 +1,390 @@
+options:
+    prefix: &6&lNectar &8»
+
+# =========================================================
+# HOST PERMISSION
+# =========================================================
+
+function hasNectarHostPermission(p: player) :: boolean:
+    set {_rank} to {rank::%uuid of {_p}%}
+
+    if {_rank} is "NECTAR":
+        return true
+    if {_rank} is "OWNER":
+        return true
+
+    return false
+
+
+# =========================================================
+# GAME SELECTOR
+# =========================================================
+
+function openGameSelector(p: player):
+    set {_inv} to chest inventory with 3 rows named "&6&lHost a Game"
+
+    loop integers from 0 to 26:
+        set slot loop-value of {_inv} to gray stained glass pane named " "
+
+    set slot 11 of {_inv} to snowball named "&b&lSpleef" with lore "&7Break the floor, knock people off." and "&7Last team standing wins." and "" and "&aClick to host"
+    set slot 15 of {_inv} to bricks named "&e&lSpeed Builders" with lore "&7Copy the target build" and "&7faster than everyone else." and "" and "&aClick to host"
+    set slot 22 of {_inv} to barrier named "&c&lClose"
+
+    open {_inv} to {_p}
+
+
+# =========================================================
+# HOST MANAGER
+# =========================================================
+
+function openHostManager(p: player):
+    set {_hostId} to getPlayerHost({_p})
+
+    if {_hostId} is not set:
+        send "{@prefix} &cYou are not hosting a game." to {_p}
+        stop
+
+    set {_game} to {host.game::%{_hostId}%}
+    set {_count} to size of {host.players::%{_hostId}%::*}
+
+    set {_inv} to chest inventory with 4 rows named "&6&lHost Manager"
+
+    loop integers from 0 to 35:
+        set slot loop-value of {_inv} to gray stained glass pane named " "
+
+    set slot 4 of {_inv} to nether star named "&e&l%{_game}%" with lore "&7Players joined: &f%{_count}%"
+
+    set slot 10 of {_inv} to book named "&e&lSettings" with lore "&7Players, teams and game options." and "" and "&aClick to edit"
+    set slot 13 of {_inv} to player head named "&b&lPlayers" with lore "&7View players in your host." and "" and "&aClick to view"
+    set slot 16 of {_inv} to lime wool named "&a&lStart Game" with lore "&7Kicks the game off for" and "&7everyone in the lobby."
+    set slot 31 of {_inv} to barrier named "&c&lCancel Host" with lore "&7Closes the host and sends" and "&7everyone back."
+
+    open {_inv} to {_p}
+
+
+# =========================================================
+# HOST SETTINGS
+# =========================================================
+
+function openHostSettings(p: player):
+    set {_hostId} to getPlayerHost({_p})
+
+    if {_hostId} is not set:
+        send "{@prefix} &cYou are not hosting a game." to {_p}
+        stop
+
+    set {_max} to {host.maxplayers::%{_hostId}%}
+    set {_team} to {host.teamsize::%{_hostId}%}
+    set {_game} to {host.game::%{_hostId}%}
+
+    if {_max} is not set:
+        set {_max} to 10
+
+    if {_team} is not set:
+        set {_team} to 1
+
+    set {_inv} to chest inventory with 4 rows named "&6&lHost Settings"
+
+    loop integers from 0 to 35:
+        set slot loop-value of {_inv} to gray stained glass pane named " "
+
+    set slot 4 of {_inv} to book named "&e&lHost Settings" with lore "&7Game: &f%{_game}%"
+
+    set slot 10 of {_inv} to red wool named "&c&l- 1"
+    set slot 13 of {_inv} to chest named "&f&lMax Players" with lore "&7Current: &e%{_max}%" and "&8Min 2, max 50"
+    set slot 16 of {_inv} to lime wool named "&a&l+ 1"
+
+    set slot 19 of {_inv} to red wool named "&c&l- 1"
+    set slot 22 of {_inv} to white wool named "&f&lTeam Size" with lore "&7Current: &e%{_team}%" and "&8Minimum 1"
+    set slot 25 of {_inv} to lime wool named "&a&l+ 1"
+
+    set slot 27 of {_inv} to arrow named "&7&lBack"
+
+    if {_game} is "Spleef":
+        set slot 31 of {_inv} to comparator named "&b&lSpleef Settings" with lore "&7Choose the Spleef mode." and "" and "&aClick to open"
+
+    if {_game} is "Speed Builders":
+        set slot 31 of {_inv} to comparator named "&b&lSpeed Builders Settings" with lore "&7Game-specific options." and "" and "&aClick to open"
+
+    open {_inv} to {_p}
+
+
+# =========================================================
+# SPLEEF SETTINGS
+#
+# Uses the existing GameManager variable:
+# {spleef.mode::<hostId>}
+#
+# normal = Normal Spleef
+# tnt    = TNT Spleef
+# =========================================================
+
+function openGameSettings(p: player):
+    set {_hostId} to getPlayerHost({_p})
+
+    if {_hostId} is not set:
+        send "{@prefix} &cYou are not hosting a game." to {_p}
+        stop
+
+    if {host.game::%{_hostId}%} is not "Spleef":
+        send "{@prefix} &cThese settings are only available for Spleef." to {_p}
+        stop
+
+    set {_mode} to {spleef.mode::%{_hostId}%}
+
+    if {_mode} is not "tnt":
+        set {_mode} to "normal"
+        set {spleef.mode::%{_hostId}%} to "normal"
+
+    set {_inv} to chest inventory with 3 rows named "&6&lSpleef Settings"
+
+    loop integers from 0 to 26:
+        set slot loop-value of {_inv} to gray stained glass pane named " "
+
+    set slot 4 of {_inv} to snowball named "&b&lSpleef Settings"
+
+    if {_mode} is "normal":
+        set slot 11 of {_inv} to snowball named "&a&lNormal Spleef" with lore "&7Classic Spleef." and "" and "&aCurrently selected"
+    else:
+        set slot 11 of {_inv} to snowball named "&f&lNormal Spleef" with lore "&7Classic Spleef." and "" and "&eClick to select"
+
+    if {_mode} is "tnt":
+        set slot 15 of {_inv} to tnt named "&6&lTNT Spleef" with lore "&7TNT Spleef mode." and "" and "&aCurrently selected"
+    else:
+        set slot 15 of {_inv} to tnt named "&6&lTNT Spleef" with lore "&7TNT Spleef mode." and "" and "&eClick to select"
+
+    set slot 22 of {_inv} to arrow named "&7&lBack"
+
+    open {_inv} to {_p}
+
+
+# =========================================================
+# GAME SELECTOR CLICKS
+# =========================================================
+
+on inventory click:
+    if name of event-inventory is "&6&lHost a Game":
+        cancel event
+
+        if clicked slot is 11:
+            close player's inventory
+            createHost(player, "Spleef")
+            set {spleef.mode::%uuid of player%} to "normal"
+            stop
+
+        if clicked slot is 15:
+            close player's inventory
+            createHost(player, "Speed Builders")
+            stop
+
+        if clicked slot is 22:
+            close player's inventory
+            stop
+
+
+# =========================================================
+# HOST MANAGER CLICKS
+# =========================================================
+
+on inventory click:
+    if name of event-inventory is "&6&lHost Manager":
+        cancel event
+
+        set {_hostId} to getPlayerHost(player)
+
+        if {_hostId} is not set:
+            close player's inventory
+            stop
+
+        if clicked slot is 10:
+            openHostSettings(player)
+            stop
+
+        if clicked slot is 13:
+            close player's inventory
+            make player execute command "/hostplayers"
+            stop
+
+        if clicked slot is 16:
+            close player's inventory
+            startHostedGame(player)
+            stop
+
+        if clicked slot is 31:
+            close player's inventory
+            cancelHost(player)
+            stop
+
+
+# =========================================================
+# HOST SETTINGS CLICKS
+# =========================================================
+
+on inventory click:
+    if name of event-inventory is "&6&lHost Settings":
+        cancel event
+
+        set {_hostId} to getPlayerHost(player)
+
+        if {_hostId} is not set:
+            close player's inventory
+            stop
+
+        set {_max} to {host.maxplayers::%{_hostId}%}
+        set {_team} to {host.teamsize::%{_hostId}%}
+        set {_game} to {host.game::%{_hostId}%}
+
+        if {_max} is not set:
+            set {_max} to 10
+
+        if {_team} is not set:
+            set {_team} to 1
+
+        if clicked slot is 10:
+            if {_max} is greater than 2:
+                remove 1 from {host.maxplayers::%{_hostId}%}
+
+                if {host.teamsize::%{_hostId}%} is greater than {host.maxplayers::%{_hostId}%}:
+                    set {host.teamsize::%{_hostId}%} to {host.maxplayers::%{_hostId}%}
+
+            openHostSettings(player)
+            stop
+
+        if clicked slot is 16:
+            if {_max} is less than 50:
+                add 1 to {host.maxplayers::%{_hostId}%}
+
+            openHostSettings(player)
+            stop
+
+        if clicked slot is 19:
+            if {_team} is greater than 1:
+                remove 1 from {host.teamsize::%{_hostId}%}
+
+            openHostSettings(player)
+            stop
+
+        if clicked slot is 25:
+            if {_team} is less than {_max}:
+                add 1 to {host.teamsize::%{_hostId}%}
+
+            openHostSettings(player)
+            stop
+
+        if clicked slot is 27:
+            openHostManager(player)
+            stop
+
+        if clicked slot is 31:
+            if {_game} is "Spleef":
+                openGameSettings(player)
+                stop
+
+            if {_game} is "Speed Builders":
+                send "{@prefix} &eSpeed Builders settings are not configured yet." to player
+                stop
+
+
+# =========================================================
+# SPLEEF SETTINGS CLICKS
+# =========================================================
+
+on inventory click:
+    if name of event-inventory is "&6&lSpleef Settings":
+        cancel event
+
+        set {_hostId} to getPlayerHost(player)
+
+        if {_hostId} is not set:
+            close player's inventory
+            stop
+
+        if {host.game::%{_hostId}%} is not "Spleef":
+            close player's inventory
+            stop
+
+        if clicked slot is 11:
+            set {spleef.mode::%{_hostId}%} to "normal"
+            send "{@prefix} &aSpleef mode set to &fNormal Spleef&a." to player
+            openGameSettings(player)
+            stop
+
+        if clicked slot is 15:
+            set {spleef.mode::%{_hostId}%} to "tnt"
+            send "{@prefix} &aSpleef mode set to &6TNT Spleef&a." to player
+            openGameSettings(player)
+            stop
+
+        if clicked slot is 22:
+            openHostSettings(player)
+            stop
+
+
+# =========================================================
+# HOTBAR: HOST A GAME
+# =========================================================
+
+on rightclick:
+    if player's tool is clock named "&6&lHost a Game":
+        cancel event
+
+        if {player.inGame::%uuid of player%} is true:
+            stop
+
+        if hasNectarHostPermission(player) is not true:
+            send "{@prefix} &cYou do not have permission to host games." to player
+            stop
+
+        if isHost(player) is true:
+            send "{@prefix} &cCancel your current host before creating another." to player
+            stop
+
+        openGameSelector(player)
+        stop
+
+
+# =========================================================
+# HOTBAR: ACTIVE HOSTS
+# =========================================================
+
+on rightclick:
+    if player's tool is nether star named "&e&lActive Hosts":
+        cancel event
+
+        if {player.inGame::%uuid of player%} is true:
+            stop
+
+        make player execute command "/activehosts"
+        stop
+
+
+# =========================================================
+# HOTBAR: HOST MANAGER
+# =========================================================
+
+on rightclick:
+    if player's tool is chest named "&6&lHost Manager":
+        cancel event
+
+        if {player.inGame::%uuid of player%} is true:
+            stop
+
+        if hasNectarHostPermission(player) is not true:
+            send "{@prefix} &cYou do not have permission to use the Host Manager." to player
+            stop
+
+        if isHost(player) is true:
+            openHostManager(player)
+        else:
+            send "{@prefix} &cYou do not have a host." to player
+
+        stop
+
+
+# =========================================================
+# CLEANUP
+# =========================================================
+
+on quit:
+    delete {hostgui.mode::%uuid of player%}
+    delete {hostgui.host::%uuid of player%}
